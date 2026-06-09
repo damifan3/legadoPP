@@ -84,6 +84,16 @@ object Debug {
         }
     }
 
+    /**
+     * 开始简单调试会话（用于定时任务等不需要完整书源调试的场景）
+     * @param key 调试会话标识
+     */
+    fun startSimpleDebug(key: String) {
+        cancelDebug()
+        debugSource = key
+        startTime = System.currentTimeMillis()
+    }
+
     fun startChecking(source: BookSource) {
         isChecking = true
         debugTimeMap[source.bookSourceUrl] = System.currentTimeMillis()

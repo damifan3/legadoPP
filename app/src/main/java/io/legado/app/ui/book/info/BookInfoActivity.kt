@@ -34,6 +34,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityBookInfoBinding
+import io.legado.app.databinding.DialogBookAutoTaskBinding
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.GlideImageGetter
@@ -76,6 +77,8 @@ import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.ReadBookActivity.Companion.RESULT_DELETED
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.AutoTask
+import io.legado.app.model.AutoTaskRule
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
@@ -89,6 +92,7 @@ import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.ConvertUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.dpToPx
@@ -276,6 +280,9 @@ class BookInfoActivity :
             viewModel.bookData.value?.isLocalTxt ?: false
         menu.findItem(R.id.menu_upload)?.isVisible =
             viewModel.bookData.value?.isLocal ?: false
+        // 定时任务入口：仅对书架中的书籍显示
+        menu.findItem(R.id.menu_auto_task)?.isVisible =
+            viewModel.inBookshelf
         menu.findItem(R.id.menu_delete_alert)?.isChecked =
             LocalConfig.bookInfoDeleteAlert
         return super.onMenuOpened(featureId, menu)
@@ -407,6 +414,11 @@ class BookInfoActivity :
                         }
                     } ?: upLoadBook(book)
                 }
+            }
+
+            // 定时任务菜单项：打开书籍定时更新设置对话框
+            R.id.menu_auto_task -> {
+                showAutoTaskDialog()
             }
         }
         return super.onCompatOptionsItemSelected(item)
@@ -1174,6 +1186,277 @@ class BookInfoActivity :
     private fun destroyWeb() {
         pooledWebView?.let { WebViewPool.release(it) }
         pooledWebView = null
+    }
+
+    // ==================== 定时任务相关方法 ====================
+
+    /**
+     * 书籍定时任务配置数据类
+     */
+    private data class BookAutoTaskConfig(
+        val enabled: Boolean,
+        val notifyEnabled: Boolean,
+        val cacheEnabled: Boolean,
+        val autoPay: Boolean,
+        val autoPayMaxCount: Int,
+        val intervalHours: Int
+    )
+
+    /**
+     * 显示定时任务设置对话框
+     * 允许用户为当前书籍配置定时更新检查任务，支持：
+     * - 启用/禁用定时检查
+     * - 新章节通知
+     * - 自动缓存新章节
+     * - 自动购买新章节VIP内容
+     */
+    private fun showAutoTaskDialog() {
+        val book = viewModel.getBook() ?: return
+        val taskId = AutoTask.bookTaskId(book.bookUrl)
+        val existing = AutoTask.getRules().firstOrNull { it.id == taskId }
+        val config = parseBookAutoTaskConfig(existing, book.bookUrl)
+        val dialogBinding = DialogBookAutoTaskBinding.inflate(layoutInflater)
+        dialogBinding.switchEnable.isChecked = config.enabled
+        dialogBinding.switchNotify.isChecked = config.notifyEnabled
+        dialogBinding.switchCache.isChecked = config.cacheEnabled
+        dialogBinding.switchAutoPay.isChecked = config.autoPay
+        dialogBinding.editAutoPayMax.setText(config.autoPayMaxCount.toString())
+        dialogBinding.editInterval.setText(config.intervalHours.toString())
+        alert(R.string.auto_task_book_update) {
+            customView { dialogBinding.root }
+            okButton {
+                val enabled = dialogBinding.switchEnable.isChecked
+                val hours = dialogBinding.editInterval.text?.toString()?.trim()?.toIntOrNull()
+                    ?.coerceAtLeast(1)
+                    ?: cachedOrDefaultIntervalHours
+                val notifyEnabled = dialogBinding.switchNotify.isChecked
+                val cacheEnabled = dialogBinding.switchCache.isChecked
+                val autoPay = dialogBinding.switchAutoPay.isChecked
+                val autoPayMaxCount = dialogBinding.editAutoPayMax.text?.toString()?.trim()?.toIntOrNull()
+                    ?.coerceAtLeast(1) ?: 10
+                val cron = "0 */$hours * * *"
+                val script = buildBookUpdateScript(
+                    bookUrl = book.bookUrl,
+                    notifyEnabled = notifyEnabled,
+                    cacheEnabled = cacheEnabled,
+                    autoPay = autoPay,
+                    autoPayMaxCount = autoPayMaxCount
+                )
+                val displayName = book.name.ifBlank { book.bookUrl }
+                val updated = (existing ?: AutoTaskRule(id = taskId)).copy(
+                    id = taskId,
+                    name = getString(R.string.auto_task_book_update_name, displayName),
+                    enable = enabled,
+                    cron = cron,
+                    script = script,
+                    autoPay = autoPay,
+                    autoPayMaxCount = autoPayMaxCount
+                )
+                AutoTask.upsert(updated)
+                LocalConfig.bookAutoTaskIntervalHours = hours
+                if (enabled) {
+                    toastOnUi(R.string.auto_task_book_update_saved)
+                } else {
+                    toastOnUi(R.string.auto_task_book_update_deleted)
+                }
+            }
+            cancelButton()
+        }
+    }
+
+    /**
+     * 解析已有任务的配置
+     */
+    private fun parseBookAutoTaskConfig(
+        task: AutoTaskRule?,
+        bookUrl: String
+    ): BookAutoTaskConfig {
+        if (task == null) {
+            return BookAutoTaskConfig(
+                enabled = true,
+                notifyEnabled = true,
+                cacheEnabled = false,
+                autoPay = false,
+                autoPayMaxCount = 10,
+                intervalHours = cachedOrDefaultIntervalHours
+            )
+        }
+        val interval = parseCronHours(task.cron)
+            ?: cachedOrDefaultIntervalHours
+        var notifyEnabled = true
+        var cacheEnabled = false
+        val json = extractTaskJson(task.script)
+        if (!json.isNullOrBlank()) {
+            val root = GSON.fromJsonObject<Map<String, Any?>>(json).getOrNull()
+            val action = findRefreshAction(root, bookUrl)
+            val notify = toStringKeyMap(action?.get("notify"))
+            val cache = toStringKeyMap(action?.get("cache"))
+            val purchase = toStringKeyMap(action?.get("purchase"))
+            notifyEnabled = readBoolean(notify, "enable", true)
+            cacheEnabled = readBoolean(cache, "enable", false)
+        }
+        return BookAutoTaskConfig(
+            enabled = task.enable,
+            notifyEnabled = notifyEnabled,
+            cacheEnabled = cacheEnabled,
+            autoPay = task.autoPay,
+            autoPayMaxCount = task.autoPayMaxCount,
+            intervalHours = interval
+        )
+    }
+
+    /**
+     * 构建书籍更新脚本
+     */
+    private fun buildBookUpdateScript(
+        bookUrl: String,
+        notifyEnabled: Boolean,
+        cacheEnabled: Boolean,
+        autoPay: Boolean,
+        autoPayMaxCount: Int
+    ): String {
+        val notify = linkedMapOf<String, Any?>(
+            "enable" to notifyEnabled,
+            "minCount" to 1
+        )
+        val cache = linkedMapOf<String, Any?>(
+            "enable" to cacheEnabled
+        )
+        val purchase = linkedMapOf<String, Any?>(
+            "enable" to autoPay,
+            "maxCount" to autoPayMaxCount
+        )
+        val action = linkedMapOf<String, Any?>(
+            "type" to "refreshToc",
+            "bookUrl" to bookUrl,
+            "notify" to notify,
+            "cache" to cache,
+            "purchase" to purchase
+        )
+        val root = linkedMapOf<String, Any?>(
+            "actions" to listOf(action)
+        )
+        val json = GSON.toJson(root)
+        return "var __autoTask = $json;\n__autoTask"
+    }
+
+    /**
+     * 从脚本中提取 JSON 内容
+     */
+    private fun extractTaskJson(script: String?): String? {
+        if (script.isNullOrBlank()) return null
+        val normalized = AutoTask.normalizeScript(script)
+        val trimmed = normalized.trim()
+        val assignMatch = Regex("^(?:var|let|const)\\s+[\\w$]+\\s*=\\s*(.+)$", RegexOption.DOT_MATCHES_ALL)
+            .find(trimmed)
+        if (assignMatch != null) {
+            val assigned = assignMatch.groupValues[1].trim()
+            val first = assigned.substringBefore(";").trim()
+            val inner = unwrapJsonExpression(first) ?: first
+            if (inner.startsWith("{") || inner.startsWith("[")) {
+                return inner
+            }
+        }
+        if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+            val inner = trimmed.substring(1, trimmed.length - 1).trim()
+            if (inner.startsWith("{") || inner.startsWith("[")) {
+                return inner
+            }
+        }
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            return trimmed
+        }
+        val index = trimmed.indexOf("return")
+        if (index < 0) return null
+        val after = trimmed.substring(index + 6).trim()
+        if (after.isBlank()) return null
+        return after.substringBefore(";").trim()
+    }
+
+    private fun unwrapJsonExpression(text: String): String? {
+        val trimmed = text.trim()
+        if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+            return trimmed.substring(1, trimmed.length - 1).trim()
+        }
+        return null
+    }
+
+    /**
+     * 解析 cron 表达式获取间隔小时数
+     */
+    private fun parseCronHours(cron: String?): Int? {
+        if (cron.isNullOrBlank()) return null
+        val trimmed = cron.trim()
+        // 新版：每小时执行 `0 */N * * *`
+        Regex("^\\s*0\\s+\\*/(\\d+)\\s+\\*\\s+\\*\\s+\\*\\s*$")
+            .find(trimmed)
+            ?.groupValues?.getOrNull(1)
+            ?.toIntOrNull()
+            ?.let { return it }
+        // 旧版：每N分钟 `*/N * * * *`，转换为小时
+        Regex("^\\s*\\*/(\\d+)\\s+\\*\\s+\\*\\s+\\*\\s+\\*\\s*$")
+            .find(trimmed)
+            ?.groupValues?.getOrNull(1)
+            ?.toIntOrNull()
+            ?.let { minutes ->
+                return Math.ceil(minutes / 60.0).toInt().coerceAtLeast(1)
+            }
+        return null
+    }
+
+    private val cachedOrDefaultIntervalHours: Int
+        get() {
+            val cached = LocalConfig.bookAutoTaskIntervalHours
+            return if (cached > 0) cached else 1
+        }
+
+    private fun findRefreshAction(
+        root: Map<String, Any?>?,
+        bookUrl: String
+    ): Map<String, Any?>? {
+        if (root == null) return null
+        val actions = when (val actionsValue = root["actions"]) {
+            is List<*> -> actionsValue
+            else -> if (root.containsKey("type")) listOf(root) else emptyList()
+        }
+        return actions.mapNotNull { toStringKeyMap(it) }
+            .firstOrNull {
+                val type = it["type"]?.toString()
+                val url = it["bookUrl"]?.toString()
+                type.equals("refreshToc", true) && url == bookUrl
+            }
+    }
+
+    private fun toStringKeyMap(value: Any?): Map<String, Any?>? {
+        return when (value) {
+            is Map<*, *> -> {
+                val out = LinkedHashMap<String, Any?>()
+                value.forEach { (k, v) ->
+                    if (k != null) out[k.toString()] = v
+                }
+                out
+            }
+            else -> null
+        }
+    }
+
+    private fun readBoolean(
+        map: Map<String, Any?>?,
+        key: String,
+        defaultValue: Boolean
+    ): Boolean {
+        if (map == null) return defaultValue
+        return when (val value = getValueIgnoreCase(map, key)) {
+            is Boolean -> value
+            is Number -> value.toInt() != 0
+            is String -> value.equals("true", true) || value == "1"
+            else -> defaultValue
+        }
+    }
+
+    private fun getValueIgnoreCase(map: Map<String, Any?>, key: String): Any? {
+        map[key]?.let { return it }
+        return map.entries.firstOrNull { it.key.equals(key, true) }?.value
     }
 
 }

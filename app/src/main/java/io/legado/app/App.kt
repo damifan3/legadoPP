@@ -49,6 +49,7 @@ import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.rhino.NativeBaseSource
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
+import io.legado.app.model.AutoTask
 import io.legado.app.model.BookCover
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.LogUtils
@@ -122,6 +123,10 @@ class App : Application() {
             //同步阅读记录
             if (AppConfig.syncBookProgress) {
                 AppWebDav.downloadAllBookProgress()
+            }
+            //启动定时任务服务（如果用户已启用）
+            if (getPrefBoolean(PreferKey.autoTaskService)) {
+                AutoTask.start(this@App)
             }
         }
     }

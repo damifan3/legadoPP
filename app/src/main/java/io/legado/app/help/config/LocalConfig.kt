@@ -128,4 +128,13 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
             putBoolean("appCrash", value)
         }
 
+    /**
+     * 书籍定时任务默认间隔小时数
+     */
+    var bookAutoTaskIntervalHours: Int
+        get() = getInt("bookAutoTaskIntervalHours", 1)
+        set(value) {
+            edit { putInt("bookAutoTaskIntervalHours", value) }
+        }
+
 }

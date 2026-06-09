@@ -514,6 +514,10 @@
         <service
             android:name=".service.DownloadService"
             android:foregroundServiceType="dataSync" />
+        <!-- 定时任务服务，用于后台定时执行任务规则 -->
+        <service
+            android:name=".service.AutoTaskService"
+            android:foregroundServiceType="dataSync" />
 
         <receiver
             android:name=".receiver.MediaButtonReceiver"
