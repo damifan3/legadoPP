@@ -1236,4 +1236,67 @@
     <string name="auto_check_new_backup_t">自动检查新备份</string>
     <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
     <string name="sys_image_picker">系统图片选择器</string>
+
+    <!-- 定时任务 AutoTask -->
+    <string name="auto_task_service">自动任务</string>
+    <string name="auto_task_service_desc">后台定时执行任务</string>
+    <string name="auto_task_manage">定时任务管理</string>
+    <string name="auto_task_manage_desc">管理定时任务规则</string>
+    <string name="auto_task_group">定时任务</string>
+    <string name="auto_task_cron">Cron 表达式（分 时 日 月 周）</string>
+    <string name="auto_task_cron_invalid">Cron 表达式无效</string>
+    <string name="auto_task_script">脚本</string>
+    <string name="auto_task_comment">脚本注释</string>
+    <string name="auto_task_header">请求头（JSON）</string>
+    <string name="auto_task_jslib">JS 库</string>
+    <string name="auto_task_concurrent_rate">并发率</string>
+    <string name="auto_task_cookie_jar">启用 CookieJar</string>
+    <string name="auto_task_enable">总开关</string>
+    <string name="auto_task_last_run">上次执行：%1$s</string>
+    <string name="auto_task_script_empty">自动任务脚本为空</string>
+    <string name="auto_task_failed">自动任务失败：%1$s</string>
+    <string name="auto_task_no_enabled">没有可执行的任务</string>
+    <string name="auto_task_running_state">运行中</string>
+    <string name="auto_task_no_task">没有任务</string>
+    <string name="auto_task_running">正在执行：%1$s</string>
+    <string name="auto_task_not_run">未执行</string>
+    <string name="auto_task_last_error">上次错误：%1$s</string>
+    <string name="auto_task_item_summary">Cron %1$s | %2$s</string>
+    <string name="auto_task_name_required">名称不能为空</string>
+    <string name="auto_task_add">新增任务</string>
+    <string name="auto_task_delete">删除任务</string>
+    <string name="auto_task_edit">编辑任务</string>
+    <string name="auto_task_debug">任务调试</string>
+    <string name="auto_task_batch_cron">更改定时</string>
+    <string name="auto_task_notify_title">任务通知</string>
+    <string name="auto_task_notify_content">%1$s</string>
+    <string name="auto_task_help_title">定时任务帮助</string>
+    <string name="auto_task_group_basic">基础</string>
+    <string name="auto_task_group_comment">注释</string>
+    <string name="auto_task_group_script">脚本</string>
+    <string name="auto_task_group_request">请求</string>
+    <string name="auto_task_group_login">登录</string>
+    <string name="import_auto_task">导入定时任务</string>
+
+    <!-- 书籍更新检测 -->
+    <string name="auto_task_book_update">定时检测更新</string>
+    <string name="auto_task_book_update_name">更新检测：%1$s</string>
+    <string name="auto_task_book_update_title">《%1$s》更新提醒</string>
+    <string name="auto_task_book_update_content">新增 %1$d 章，最新：%2$s</string>
+    <string name="auto_task_book_update_content_count">新增 %1$d 章</string>
+    <string name="auto_task_book_update_saved">定时任务已保存</string>
+    <string name="auto_task_book_update_deleted">定时任务已禁用</string>
+    <string name="auto_task_notify_switch">通知</string>
+    <string name="auto_task_cache_switch">缓存新章节</string>
+    <string name="auto_task_interval">间隔（小时）</string>
+
+    <!-- 自动购买 -->
+    <string name="auto_task_auto_pay">自动购买</string>
+    <string name="auto_task_auto_pay_desc">检测到新章节时自动购买</string>
+    <string name="auto_task_auto_pay_max_count">单次最大购买数</string>
+    <string name="auto_task_auto_pay_skip_vip">跳过 VIP 章节</string>
+    <string name="auto_task_purchase_success">自动购买成功：%1$d 章</string>
+    <string name="auto_task_purchase_failed">自动购买失败：%1$d 章</string>
+    <string name="auto_task_purchase_no_action">书源未配置购买规则</string>
+    <string name="auto_task_purchase_no_unpaid">无需购买的章节</string>
 </resources>

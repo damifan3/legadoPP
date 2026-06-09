@@ -59,6 +59,7 @@ object PreferKey {
     const val webPort = "webPort"
     const val keepLight = "keep_light"
     const val webService = "webService"
+    const val autoTaskService = "autoTaskService"
     const val webDavUrl = "web_dav_url"
     const val webDavAccount = "web_dav_account"
     const val webDavPassword = "web_dav_password"

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  定时任务批量选择菜单
+  文件位置：legado/app/src/main/res/menu/auto_task_sel.xml
+  作用：批量操作选中的任务项。
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_batch_cron"
+        android:title="@string/auto_task_batch_cron"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_enable_selection"
+        android:title="@string/enable_selection"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_disable_selection"
+        android:title="@string/disable_selection"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_export_selection"
+        android:title="@string/export_selection"
+        app:showAsAction="never" />
+
+</menu>
