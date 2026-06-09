@@ -51,6 +51,13 @@
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false" />
 
+    <io.legado.app.lib.prefs.Preference
+        android:icon="@drawable/ic_timer_black_24dp"
+        android:key="autoTaskManage"
+        android:summary="@string/auto_task_manage_desc"
+        android:title="@string/auto_task_manage"
+        app:iconSpaceReserved="false" />
+
     <io.legado.app.lib.prefs.PreferenceCategory
         android:title="@string/setting"
         app:allowDividerAbove="false"
