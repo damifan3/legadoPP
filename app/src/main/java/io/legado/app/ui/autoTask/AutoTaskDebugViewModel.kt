@@ -84,7 +84,9 @@ class AutoTaskDebugViewModel(application: Application) : BaseViewModel(applicati
                     Debug.log(source.getKey(), msg, showTime = false)
                 }
 
-                val detail = result?.toString()?.take(200)
+                val detail = runCatching {
+                    if (result is String) result else io.legado.app.utils.GSON.toJson(result)
+                }.getOrNull()?.take(200) ?: result?.toString()?.take(200)
                 if (!detail.isNullOrBlank()) {
                     Debug.log(source.getKey(), detail, showTime = false)
                 }

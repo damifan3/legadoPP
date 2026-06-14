@@ -20,3 +20,5 @@ package-lock.json
 .vscode
 .claude
 /bookSources
+/logCat
+*.log

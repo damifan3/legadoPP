@@ -423,19 +423,24 @@ object DatabaseMigrations {
      * 迁移 89 -> 90：添加定时任务规则表 (auto_task_rules)
      *
      * 该表用于存储定时任务的配置信息，包括自动购买章节的设置。
-     * 字段说明：
-     * - id: 任务唯一标识（主键）
+     * 字段说明与 AutoTaskRule 实体类一一对应：
+     * - id: 任务唯一标识（主键，UUID）
      * - name: 任务名称
      * - enable: 是否启用（1=启用，0=禁用）
-     * - cron: Cron 表达式（5字段格式：分 时 日 月 周）
-     * - script: 执行的 JS 脚本内容
-     * - header: 请求头配置（JSON格式）
-     * - jsLib: JS 库代码
+     * - cron: Cron 表达式（5字段格式：分 时 日 月 周，可空）
      * - loginUrl: 登录 URL
      * - loginUi: 登录 UI 配置（JSON格式）
      * - loginCheckJs: 登录检查 JS 代码
-     * - lastExecutionTime: 上次执行时间戳（毫秒）
-     * - lastExecutionResult: 上次执行结果描述
+     * - comment: 脚本注释/说明
+     * - script: 执行的 JS 脚本内容（不可空）
+     * - header: 请求头配置（JSON格式）
+     * - jsLib: JS 库代码
+     * - concurrentRate: 并发限制，格式 "次数/毫秒"
+     * - enabledCookieJar: 是否启用 Cookie 管理
+     * - lastRunAt: 上次执行时间戳（毫秒）
+     * - lastResult: 上次执行结果摘要
+     * - lastError: 上次执行错误信息
+     * - lastLog: 上次执行日志
      * - autoPay: 是否自动购买新章节（1=是，0=否）
      * - autoPayMaxCount: 单次自动购买最大章节数（默认10）
      */
@@ -445,16 +450,21 @@ object DatabaseMigrations {
                 CREATE TABLE IF NOT EXISTS auto_task_rules (
                     id TEXT NOT NULL,
                     name TEXT NOT NULL,
-                    enable INTEGER NOT NULL DEFAULT 1,
-                    cron TEXT NOT NULL,
-                    script TEXT,
-                    header TEXT,
-                    jsLib TEXT,
+                    enable INTEGER NOT NULL,
+                    cron TEXT,
                     loginUrl TEXT,
                     loginUi TEXT,
                     loginCheckJs TEXT,
-                    lastExecutionTime INTEGER NOT NULL DEFAULT 0,
-                    lastExecutionResult TEXT,
+                    comment TEXT,
+                    script TEXT NOT NULL,
+                    header TEXT,
+                    jsLib TEXT,
+                    concurrentRate TEXT,
+                    enabledCookieJar INTEGER NOT NULL,
+                    lastRunAt INTEGER NOT NULL,
+                    lastResult TEXT,
+                    lastError TEXT,
+                    lastLog TEXT,
                     autoPay INTEGER NOT NULL DEFAULT 0,
                     autoPayMaxCount INTEGER NOT NULL DEFAULT 10,
                     PRIMARY KEY (id)
