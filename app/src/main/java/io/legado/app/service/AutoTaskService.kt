@@ -34,11 +34,13 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
+import io.legado.app.constant.EventBus
 import io.legado.app.model.AutoTask
 import io.legado.app.model.AutoTaskRule
 import io.legado.app.model.AutoTaskProtocol
 import io.legado.app.utils.CronSchedule
 import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.startForegroundServiceCompat
@@ -158,6 +160,7 @@ class AutoTaskService : BaseService() {
             dataSyncLoopJob?.cancel()
             dataSyncLoopJob = null
             cancelNextAlarm()
+            postEvent(EventBus.AUTO_TASK, false)// [NEW] 发送实时状态通知
             stopSelf()
             return START_NOT_STICKY
         }
@@ -387,7 +390,6 @@ class AutoTaskService : BaseService() {
     /**
      * 使用 AlarmManager 调度下次运行（Android 15+）
      */
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun scheduleNextAlarm(triggerAt: Long) {
         if (!useAlarmFgsMode()) return
 
@@ -495,19 +497,29 @@ class AutoTaskService : BaseService() {
                 val cost = System.currentTimeMillis() - startAt
                 val logLines = mutableListOf<String>()
 
-                // 使用 AutoTaskProtocol 处理返回结果
+                // 使用 AutoTaskProtocol 处理脚本执行的结果
                 AutoTaskProtocol.handle(result, this, task.name) { msg ->
                     AppLog.put("AutoTask[${task.id}] ${task.name}: $msg")
+                    //logLines 其实是 handle 内部 summary；是 handleAction 执行完每个动作返回的结果
                     logLines.add(msg)
                 }
 
-                val detail = result?.toString()?.take(200)
-                val msg = if (detail.isNullOrBlank()) {
+                val detail = runCatching {
+                    if (result is String) result else io.legado.app.utils.GSON.toJson(result)
+                }.getOrNull()?.take(200) ?: result?.toString()?.take(200)
+                val logMsg = if (detail.isNullOrBlank()) {
                     "AutoTask[${task.id}] ${task.name} done (${cost}ms)."
                 } else {
                     "AutoTask[${task.id}] ${task.name} done (${cost}ms): $detail"
                 }
+                val msg = if (detail.isNullOrBlank()) {
+                    "${task.name} done (${cost}ms)"
+                } else {
+                    "${task.name} done (${cost}ms): $detail"
+                }
                 val lastRun = System.currentTimeMillis()
+                // detail 应该就是脚本部分执行的返回值
+                //logLines 应该是每个动作的执行结果
                 val lastLog = buildLastLog(logLines, detail, cost, lastRun)
 
                 AutoTask.update(task.id) {
@@ -520,7 +532,7 @@ class AutoTaskService : BaseService() {
 
                 notificationContent = msg
                 upNotification()
-                AppLog.put(msg)
+                AppLog.put(logMsg)
             } catch (e: Exception) {
                 val msg = e.localizedMessage ?: e.toString()
                 val lastLog = buildErrorLog(msg, e, System.currentTimeMillis())
@@ -597,7 +609,7 @@ class AutoTaskService : BaseService() {
             }
         }
         if (!detail.isNullOrBlank()) {
-            sb.append('\n').append("返回: ").append(detail)
+            sb.append('\n').append("脚本执行返回: ").append(detail)
         }
         val text = sb.toString().ifBlank { "执行完成" }
         return if (text.length > maxLogLength) text.take(maxLogLength) else text
@@ -636,13 +648,9 @@ class AutoTaskService : BaseService() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // Android 10+ 需要指定前台服务类型
-            val serviceType = if (useAlarmFgsMode()) {
-                // Android 15+ 使用短时服务类型
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
-            } else {
-                // 旧版本使用数据同步服务类型
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            }
+            // 统一使用 DATA_SYNC，与 Manifest 声明一致
+            // Android 15+ AlarmManager 模式下前台服务时间很短，dataSync 类型足够
+            val serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             startForeground(NotificationId.AutoTaskService, notification, serviceType)
         } else {
             startForeground(NotificationId.AutoTaskService, notification)

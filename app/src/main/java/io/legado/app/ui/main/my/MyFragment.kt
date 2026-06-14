@@ -17,9 +17,11 @@ import io.legado.app.lib.prefs.NameListPreference
 import io.legado.app.lib.prefs.SwitchPreference
 import io.legado.app.lib.prefs.fragment.PreferenceFragment
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.model.AutoTask
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.AboutActivity
 import io.legado.app.ui.about.ReadRecordActivity
+import io.legado.app.ui.autoTask.AutoTaskActivity
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
@@ -102,11 +104,35 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                     }
                 }
             }
+            // [NEW] 监听定时任务的服务状态事件
+            observeEventSticky<Boolean>(EventBus.AUTO_TASK) {
+                findPreference<SwitchPreference>(PreferKey.autoTaskService)?.let { pref ->
+                    if (pref.isChecked != it) {
+                        pref.isChecked = it
+                    }
+                }
+            }
             findPreference<NameListPreference>(PreferKey.themeMode)?.let {
                 it.setOnPreferenceChangeListener { _, _ ->
                     view?.post { ThemeConfig.applyDayNight(requireContext()) }
                     true
                 }
+            }
+            findPreference<SwitchPreference>(PreferKey.webService)?.setOnPreferenceChangeListener { _, newValue ->
+                if (newValue as Boolean) {
+                    WebService.start(requireContext())
+                } else {
+                    WebService.stop(requireContext())
+                }
+                true
+            }
+            findPreference<SwitchPreference>(PreferKey.autoTaskService)?.setOnPreferenceChangeListener { _, newValue ->
+                if (newValue as Boolean) {
+                    AutoTask.start(requireContext())
+                } else {
+                    AutoTask.stop(requireContext())
+                }
+                true
             }
         }
 
@@ -125,19 +151,12 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
             super.onPause()
         }
 
+        //检测到配置变化
         override fun onSharedPreferenceChanged(
             sharedPreferences: SharedPreferences?,
             key: String?
         ) {
             when (key) {
-                PreferKey.webService -> {
-                    if (requireContext().getPrefBoolean("webService")) {
-                        WebService.start(requireContext())
-                    } else {
-                        WebService.stop(requireContext())
-                    }
-                }
-
                 "recordLog" -> LogUtils.upLevel()
             }
         }
@@ -148,6 +167,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                 "replaceManage" -> startActivity<ReplaceRuleActivity>()
                 "dictRuleManage" -> startActivity<DictRuleActivity>()
                 "txtTocRuleManage" -> startActivity<TxtTocRuleActivity>()
+                "autoTaskManage" -> startActivity<AutoTaskActivity>()
                 "bookmark" -> startActivity<AllBookmarkActivity>()
                 "setting" -> startActivity<ConfigActivity> {
                     putExtra("configTag", ConfigTag.OTHER_CONFIG)

@@ -71,6 +71,7 @@ object AutoTaskProtocol {
 
         // 依次执行每个动作
         for (action in actions) {
+            //summary 是 handleAction 执行完每个动作返回的结果
             val summary = handleAction(action, context, taskName)
             if (summary.isNotBlank()) {
                 summaries.add(summary)
@@ -79,6 +80,8 @@ object AutoTaskProtocol {
         }
 
         val merged = summaries.joinToString(" | ").ifBlank { null }
+        //本身 summary 就是 handleAction 执行完每个动作返回的结果
+        //此处又将其送入 HandleResult 二次处理
         return HandleResult(true, merged, summaries)
     }
 
@@ -155,6 +158,7 @@ object AutoTaskProtocol {
         val purchaseMaxCount = purchaseObj?.let { getInt(it, "maxCount") } ?: 10
 
         // 判断是否需要执行各项操作
+        //如果更新章节数大于最小通知数 且 大于0，才应该通知
         val shouldNotify = notifyEnabled && newCount >= notifyMin && newCount > 0
         val shouldCache = cacheEnabled && newCount > 0
         val shouldPurchase = purchaseEnabled && newCount > 0
@@ -163,18 +167,6 @@ object AutoTaskProtocol {
         val latestTitle = getLatestChapterTitle(afterList)
         val titleTpl = notifyObj?.let { getString(it, "title") }
         val contentTpl = notifyObj?.let { getString(it, "content") }
-
-        // 发送更新通知
-        if (shouldNotify) {
-            notifyBookUpdate(
-                context = context,
-                book = book,
-                newCount = newCount,
-                latestTitle = latestTitle,
-                titleTpl = titleTpl,
-                contentTpl = contentTpl
-            )
-        }
 
         // 自动购买新增章节（仅新增章节，不遍历全部未购买章节）
         var purchaseCount = 0
@@ -216,6 +208,14 @@ object AutoTaskProtocol {
                     }
                 }
             }
+
+            if (purchaseCount > 0) {
+                // 购买后再次刷新目录（防止购买前后章节名不同）
+                val refreshAgain = BookController.refreshToc(mapOf("url" to listOf(bookUrl)))
+                if (!refreshAgain.isSuccess) {
+                    AppLog.put("《${book.name}》购买后更新目录失败: ${refreshAgain.errorMsg}")
+                }
+            }
         }
 
         // 缓存新章节
@@ -227,6 +227,20 @@ object AutoTaskProtocol {
                 CacheBook.start(context, book, start, end)
                 cacheCount = end - start + 1
             }
+        }
+
+        // 发送更新及购买结果通知
+        if (shouldNotify) {
+            notifyBookUpdate(
+                context = context,
+                book = book,
+                newCount = newCount,
+                latestTitle = latestTitle,
+                titleTpl = titleTpl,
+                contentTpl = contentTpl,
+                purchaseCount = purchaseCount,
+                purchaseFailCount = purchaseFailCount
+            )
         }
 
         return buildSummary(book, newCount, shouldNotify, cacheCount, purchaseCount, purchaseFailCount)
@@ -299,7 +313,9 @@ object AutoTaskProtocol {
         newCount: Int,
         latestTitle: String?,
         titleTpl: String?,
-        contentTpl: String?
+        contentTpl: String?,
+        purchaseCount: Int = 0,
+        purchaseFailCount: Int = 0
     ) {
         val time = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date())
 
@@ -311,7 +327,15 @@ object AutoTaskProtocol {
         }
 
         val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time)
-        val content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time)
+        var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time)
+
+        //增加的购买信息必须放在 contentTpl ?: defaultContent 后边，不然会被用户定义模板取代。
+        if (purchaseCount > 0 ) {
+            content += "\n自动购买成功: ${purchaseCount}章"
+        }
+        if (purchaseFailCount > 0 ) {
+            content += "\n自动购买失败: ${purchaseFailCount}章"
+        }
 
         // 计算通知 ID（基于书籍 URL 哈希）
         val notifyId = NotificationId.AutoTaskBookUpdateBase +
