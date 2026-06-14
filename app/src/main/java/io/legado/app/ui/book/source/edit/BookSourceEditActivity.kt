@@ -42,6 +42,7 @@ import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
+import io.legado.app.ui.widget.text.FieldNavController
 import io.legado.app.utils.GSON
 import io.legado.app.utils.imeHeight
 import io.legado.app.utils.isContentScheme
@@ -97,6 +98,10 @@ class BookSourceEditActivity :
 
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
+    }
+
+    private val fieldNavController by lazy {
+        FieldNavController(this, binding.fieldNavScroll, binding.fieldNavGroup, binding.recyclerView)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -286,6 +291,7 @@ class BookSourceEditActivity :
 //            6 -> reviewEntities
             else -> sourceEntities
         }
+        fieldNavController.updateFieldNav(adapter.editEntities)
         binding.recyclerView.scrollToPosition(0)
         window.decorView.rootView.clearFocus()
     }
