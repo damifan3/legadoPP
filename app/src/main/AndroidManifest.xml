@@ -21,6 +21,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".App"
@@ -326,6 +327,21 @@
             android:name=".ui.dict.rule.DictRuleActivity"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />
+        <!-- 定时任务管理 -->
+        <activity
+            android:name=".ui.autoTask.AutoTaskActivity"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <!-- 定时任务编辑 -->
+        <activity
+            android:name=".ui.autoTask.AutoTaskEditActivity"
+            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <!-- 定时任务调试 -->
+        <activity
+            android:name=".ui.autoTask.AutoTaskDebugActivity"
+            android:launchMode="singleTop" />
         <!-- 文件管理 -->
         <activity
             android:name=".ui.file.FileManageActivity"

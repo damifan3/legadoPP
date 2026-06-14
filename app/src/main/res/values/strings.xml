@@ -144,8 +144,15 @@
     <string name="auto_task_group_request">Request</string>
     <string name="auto_task_group_login">Login</string>
     <string name="auto_task_auto_pay">Auto purchase</string>
+    <string name="auto_task_auto_pay_desc">Auto purchase new chapters when detected</string>
     <string name="auto_task_auto_pay_max">Max purchase count</string>
+    <string name="auto_task_auto_pay_max_count">Max purchase count per run</string>
+    <string name="auto_task_auto_pay_skip_vip">Skip VIP chapters</string>
     <string name="auto_task_auto_pay_summary">Auto purchase new VIP chapters when detected</string>
+    <string name="auto_task_purchase_success">Auto purchase success: %1$d chapters</string>
+    <string name="auto_task_purchase_failed">Auto purchase failed: %1$d chapters</string>
+    <string name="auto_task_purchase_no_action">Book source has no purchase rule configured</string>
+    <string name="auto_task_purchase_no_unpaid">No chapters need purchase</string>
     <string name="import_auto_task">Import auto tasks</string>
     <string name="import_status_new">New</string>
     <string name="import_status_update">Update</string>
