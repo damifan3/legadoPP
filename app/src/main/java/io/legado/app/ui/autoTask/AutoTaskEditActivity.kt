@@ -37,6 +37,7 @@ import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
+import io.legado.app.ui.widget.text.FieldNavController
 import io.legado.app.ui.widget.dialog.CodeDialog
 import io.legado.app.utils.CronSchedule
 import io.legado.app.utils.GSON
@@ -88,13 +89,14 @@ class AutoTaskEditActivity :
     // 原始任务（用于判断是否有修改）
     private var originTask: AutoTaskRule? = null
 
-    // 当前选中的导航索引
-    private var selectedNavIndex = 0
-    private var navClickScrolling = false
-
     // 软键盘工具
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
+    }
+
+    // 顶部快捷导航
+    private val fieldNavController by lazy {
+        FieldNavController(this, binding.fieldNavScroll, binding.fieldNavGroup, binding.recyclerView)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -157,24 +159,6 @@ class AutoTaskEditActivity :
             softKeyboardTool.initialPadding = windowInsets.imeHeight
             windowInsets
         }
-
-        // 监听滚动，更新导航高亮
-        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(rv: RecyclerView, newState: Int) {
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    navClickScrolling = false
-                }
-            }
-
-            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                if (navClickScrolling) return
-                val lm = rv.layoutManager as? LinearLayoutManager ?: return
-                val firstVisible = lm.findFirstVisibleItemPosition()
-                if (firstVisible >= 0 && firstVisible != selectedNavIndex) {
-                    highlightNavItem(firstVisible)
-                }
-            }
-        })
     }
 
     /**
@@ -201,7 +185,7 @@ class AutoTaskEditActivity :
         addField("loginCheckJs", rule.loginCheckJs, R.string.login_check_js)
 
         adapter.editEntities = entities
-        updateFieldNav(entities)
+        fieldNavController.updateFieldNav(entities)
     }
 
     /**
@@ -218,77 +202,6 @@ class AutoTaskEditActivity :
      */
     private fun getFieldValue(key: String): String {
         return fieldMap[key]?.value?.trim().orEmpty()
-    }
-
-    /**
-     * 更新字段导航
-     */
-    private fun updateFieldNav(entities: List<EditEntity>) {
-        val container = binding.fieldNavGroup
-        container.removeAllViews()
-
-        entities.forEachIndexed { index, entity ->
-            val label = entity.hint.replace(Regex("[（(].+?[）)]"), "").trim()
-            val tv = TextView(this).apply {
-                text = label
-                textSize = 12f
-                setPadding(24, 8, 24, 8)
-                setBackgroundResource(R.drawable.bg_field_nav_item)
-                setTextColor(context.getColor(R.color.primaryText))
-                gravity = android.view.Gravity.CENTER
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                lp.marginEnd = 6
-                layoutParams = lp
-                setOnClickListener {
-                    navClickScrolling = true
-                    val lm = binding.recyclerView.layoutManager as? LinearLayoutManager
-                    if (lm != null) {
-                        val scroller = object : androidx.recyclerview.widget.LinearSmoothScroller(context) {
-                            override fun getVerticalSnapPreference() = SNAP_TO_START
-                            override fun calculateDtToFit(
-                                viewStart: Int, viewEnd: Int,
-                                boxStart: Int, boxEnd: Int,
-                                snapPreference: Int
-                            ): Int {
-                                val offset = (resources.displayMetrics.density * 4).toInt()
-                                return boxStart - viewStart + offset
-                            }
-                        }
-                        scroller.targetPosition = index
-                        lm.startSmoothScroll(scroller)
-                    }
-                    highlightNavItem(index)
-                }
-            }
-            container.addView(tv)
-        }
-        highlightNavItem(0)
-    }
-
-    /**
-     * 高亮导航项
-     */
-    private fun highlightNavItem(index: Int) {
-        val container = binding.fieldNavGroup
-        if (selectedNavIndex in 0 until container.childCount) {
-            val prev = container.getChildAt(selectedNavIndex) as? TextView
-            prev?.isSelected = false
-            prev?.setTextColor(getColor(R.color.primaryText))
-        }
-        if (index in 0 until container.childCount) {
-            val curr = container.getChildAt(index) as? TextView
-            curr?.isSelected = true
-            curr?.setTextColor(android.graphics.Color.WHITE)
-            curr?.let {
-                binding.fieldNavScroll.smoothScrollTo(
-                    (it.left - 16).coerceAtLeast(0), 0
-                )
-            }
-        }
-        selectedNavIndex = index
     }
 
     /**
