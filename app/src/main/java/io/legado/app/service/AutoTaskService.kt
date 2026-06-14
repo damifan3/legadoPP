@@ -74,6 +74,9 @@ class AutoTaskService : BaseService() {
         // 首次运行宽限时间（毫秒）- 用于处理 lastRunAt 为 0 的情况
         private const val FIRST_RUN_GRACE_MS = 5 * 60_000L
 
+        // 日志分隔符
+        private const val LOG_SEPARATOR = "\n====================\n"
+
         // 服务是否正在运行
         var isRun = false
             private set
@@ -520,27 +523,29 @@ class AutoTaskService : BaseService() {
                 val lastRun = System.currentTimeMillis()
                 // detail 应该就是脚本部分执行的返回值
                 //logLines 应该是每个动作的执行结果
-                val lastLog = buildLastLog(logLines, detail, cost, lastRun)
+                val newLog = buildLastLog(logLines, detail, cost, lastRun)
 
+                //这是日志内容（不是右上角的调试）
                 AutoTask.update(task.id) {
                     it.copy(
                         lastRunAt = lastRun,
                         lastError = null,
-                        lastLog = lastLog
+                        lastLog = mergeWithHistory(newLog, it.lastLog)
                     )
                 }
 
+                //这是通知栏的常驻通知内容
                 notificationContent = msg
                 upNotification()
                 AppLog.put(logMsg)
             } catch (e: Exception) {
                 val msg = e.localizedMessage ?: e.toString()
-                val lastLog = buildErrorLog(msg, e, System.currentTimeMillis())
+                val errorLog = buildErrorLog(msg, e, System.currentTimeMillis())
                 AutoTask.update(task.id) {
                     it.copy(
                         lastRunAt = System.currentTimeMillis(),
                         lastError = msg,
-                        lastLog = lastLog
+                        lastLog = mergeWithHistory(errorLog, it.lastLog)
                     )
                 }
                 notificationContent = getString(R.string.auto_task_failed, msg)
@@ -549,12 +554,12 @@ class AutoTaskService : BaseService() {
             }
         }.onFailure { error ->
             val msg = error.localizedMessage ?: error.toString()
-            val lastLog = buildErrorLog(msg, error, System.currentTimeMillis())
+            val errorLog = buildErrorLog(msg, error, System.currentTimeMillis())
             AutoTask.update(task.id) {
                 it.copy(
                     lastRunAt = System.currentTimeMillis(),
                     lastError = msg,
-                    lastLog = lastLog
+                    lastLog = mergeWithHistory(errorLog, it.lastLog)
                 )
             }
             notificationContent = getString(R.string.auto_task_failed, msg)
@@ -585,7 +590,22 @@ class AutoTaskService : BaseService() {
         if (task.lastError == message) return
         AutoTask.update(task.id) {
             val now = System.currentTimeMillis()
-            it.copy(lastError = message, lastLog = buildErrorLog(message, null, now))
+            val errorLog = buildErrorLog(message, null, now)
+            it.copy(lastError = message, lastLog = mergeWithHistory(errorLog, it.lastLog))
+        }
+    }
+
+    /**
+     * 合并新日志与历史日志（保留最近 N 条）
+     */
+    private fun mergeWithHistory(newLog: String, oldLogHistory: String?, maxCount: Int = 5): String {
+        val oldLogs = oldLogHistory?.split(LOG_SEPARATOR)?.filter { it.isNotBlank() } ?: emptyList()
+        val combinedLogs = (listOf(newLog) + oldLogs).take(maxCount)
+        val resultString = combinedLogs.joinToString(LOG_SEPARATOR)
+        return if (resultString.length > maxLogLength * maxCount) {
+            resultString.take(maxLogLength * maxCount)
+        } else {
+            resultString
         }
     }
 
