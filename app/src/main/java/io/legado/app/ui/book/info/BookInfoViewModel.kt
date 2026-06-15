@@ -248,6 +248,12 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
             WebBook.getChapterList(scope, bookSource, book, runPreUpdateJs, isFromBookInfo = isFromBookInfo)
                 .onSuccess(IO) {
                     if (inBookshelf) {
+                        //以下四行标准范式：每个更新目录的地方都要加上，防止前面章节黑屋后，缓存失效
+//                        val oldToc = appDb.bookChapterDao.getChapterList(oldBook.bookUrl)
+//                        BookHelp.migrateTocCache(book, oldToc, fakeToc)
+//                        appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+//                        appDb.bookChapterDao.insert(*fakeToc.toTypedArray())
+
                         //oldToc的获取必须放在所有可能的 update和 replace前面，不然就被删了获取不到
                         val oldToc = appDb.bookChapterDao.getChapterList(oldBook.bookUrl)
                         
