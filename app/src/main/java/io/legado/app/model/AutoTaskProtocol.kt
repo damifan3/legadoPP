@@ -326,16 +326,16 @@ object AutoTaskProtocol {
             context.getString(R.string.auto_task_book_update_content, newCount, latestTitle)
         }
 
-        val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time)
-        var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time)
+        val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
+        var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
 
         //增加的购买信息必须放在 contentTpl ?: defaultContent 后边，不然会被用户定义模板取代。
-        if (purchaseCount > 0 ) {
-            content += "\n自动购买成功: ${purchaseCount}章"
-        }
-        if (purchaseFailCount > 0 ) {
-            content += "\n自动购买失败: ${purchaseFailCount}章"
-        }
+//        if (purchaseCount > 0 ) {
+//            content += "\n自动购买成功: ${purchaseCount}章"
+//        }
+//        if (purchaseFailCount > 0 ) {
+//            content += "\n自动购买失败: ${purchaseFailCount}章"
+//        }
 
         // 计算通知 ID（基于书籍 URL 哈希）
         val notifyId = NotificationId.AutoTaskBookUpdateBase +
@@ -506,7 +506,7 @@ object AutoTaskProtocol {
     // ==================== 模板格式化方法 ====================
 
     /**
-     * 格式化书籍更新模板
+     * 格式化书籍更新模板，将用户脚本中的变量替换为真实值
      * 支持变量：{book}, {author}, {newCount}, {chapter}, {time}
      */
     private fun formatTemplate(
@@ -514,7 +514,9 @@ object AutoTaskProtocol {
         book: Book,
         newCount: Int,
         latestTitle: String?,
-        time: String
+        time: String,
+        purchaseCount: Int,
+        purchaseFailCount: Int
     ): String {
         return template
             .replace("{book}", book.name)
@@ -522,6 +524,8 @@ object AutoTaskProtocol {
             .replace("{newCount}", newCount.toString())
             .replace("{chapter}", latestTitle.orEmpty())
             .replace("{time}", time)
+            .replace("{purchaseCount}", purchaseCount.toString())
+            .replace("{purchaseFailCount}", purchaseFailCount.toString())
     }
 
     /**
