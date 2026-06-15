@@ -11,6 +11,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.decompressed
@@ -97,8 +98,18 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                     val dbBook = appDb.bookDao.getBook(it.name, it.author)
                     if (dbBook != null) {
                         val toc = WebBook.getChapterListAwait(bookSource, it).getOrThrow()
+                        val oldToc = appDb.bookChapterDao.getChapterList(dbBook.bookUrl)
+                        
                         dbBook.migrateTo(it, toc)
-                        appDb.bookDao.insert(it)
+                        if (dbBook.bookUrl == it.bookUrl) {
+                            appDb.bookDao.update(it)
+                        } else {
+                            appDb.bookDao.replace(dbBook, it)
+                            BookHelp.updateCacheFolder(dbBook, it)
+                        }
+
+                        BookHelp.migrateTocCache(it, oldToc, toc)
+                        appDb.bookChapterDao.delByBook(dbBook.bookUrl)
                         appDb.bookChapterDao.insert(*toc.toTypedArray())
                     } else {
                         it.order = appDb.bookDao.minOrder - 1

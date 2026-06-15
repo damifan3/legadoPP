@@ -197,14 +197,21 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
             val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
             book.sync(oldBook)
             book.removeType(BookType.updateError)
+            //以下四行标准范式：每个更新目录的地方都要加上，防止前面章节黑屋后，缓存失效
+            val oldToc = appDb.bookChapterDao.getChapterList(bookUrl)
+            
             if (book.bookUrl == bookUrl) {
                 appDb.bookDao.update(book)
             } else {
                 appDb.bookDao.replace(oldBook, book)
                 BookHelp.updateCacheFolder(oldBook, book)
             }
+
+            BookHelp.migrateTocCache(book, oldToc, toc)
             appDb.bookChapterDao.delByBook(bookUrl)
+            //星号是展开操作符，数组展开后，是一个可变长参数。
             appDb.bookChapterDao.insert(*toc.toTypedArray())
+            
             ReadBook.onChapterListUpdated(book)
             addDownload(source, book)
         }.onFailure {

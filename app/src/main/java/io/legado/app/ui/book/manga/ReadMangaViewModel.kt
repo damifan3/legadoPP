@@ -120,14 +120,20 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         val bookSource = ReadManga.bookSource ?: return true
         val oldBook = book.copy()
         WebBook.getChapterListAwait(bookSource, book, true).onSuccess { cList ->
+            //以下四行标准范式：每个更新目录的地方都要加上，防止前面章节黑屋后，缓存失效
+            val oldToc = appDb.bookChapterDao.getChapterList(oldBook.bookUrl)
+            
             if (oldBook.bookUrl == book.bookUrl) {
                 appDb.bookDao.update(book)
             } else {
                 appDb.bookDao.replace(oldBook, book)
                 BookHelp.updateCacheFolder(oldBook, book)
             }
+
+            BookHelp.migrateTocCache(book, oldToc, cList)
             appDb.bookChapterDao.delByBook(oldBook.bookUrl)
             appDb.bookChapterDao.insert(*cList.toTypedArray())
+
             ReadManga.onChapterListUpdated(book)
             return true
         }.onFailure {

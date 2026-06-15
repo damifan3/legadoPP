@@ -247,21 +247,49 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
             val oldBook = book.copy()
             WebBook.getChapterList(scope, bookSource, book, runPreUpdateJs, isFromBookInfo = isFromBookInfo)
                 .onSuccess(IO) {
+                    // 【测试修改】强行删掉网络返回的前两章，模拟网站黑屋：
+                    val fakeToc = it.toMutableList()
+                    // 【测试修改】强行删掉网络返回的前两章，模拟网站黑屋：
+                    if (fakeToc.size > 2) {
+                        fakeToc.removeAt(0)
+                        fakeToc.removeAt(0)
+                        // 【测试修改-关键补丁】重新从 0 整理章节索引，模拟真实解析时的行为
+                        for (i in fakeToc.indices) {
+                            fakeToc[i].index = i
+                        }
+                    }
+
                     if (inBookshelf) {
+                        //以下四行标准范式：每个更新目录的地方都要加上，防止前面章节黑屋后，缓存失效
+//                        val oldToc = appDb.bookChapterDao.getChapterList(oldBook.bookUrl)
+//                        BookHelp.migrateTocCache(book, oldToc, fakeToc)
+//                        appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+//                        appDb.bookChapterDao.insert(*fakeToc.toTypedArray())
+
+                        //oldToc的获取必须放在所有可能的 update和 replace前面，不然就被删了获取不到
+                        val oldToc = appDb.bookChapterDao.getChapterList(oldBook.bookUrl)
+                        
                         book.removeType(BookType.updateError)
-                        appDb.bookDao.replace(oldBook, book)
                         /**
                          * runPreUpdateJs 有可能会修改 book 的 bookUrl
                          */
-                        if (oldBook.bookUrl != book.bookUrl) {
+                        if (oldBook.bookUrl == book.bookUrl) {
+                            appDb.bookDao.update(book)
+                        } else {
+                            appDb.bookDao.replace(oldBook, book)
                             BookHelp.updateCacheFolder(oldBook, book)
                         }
+
+                        BookHelp.migrateTocCache(book, oldToc, fakeToc)
                         appDb.bookChapterDao.delByBook(oldBook.bookUrl)
-                        appDb.bookChapterDao.insert(*it.toTypedArray())
+                        appDb.bookChapterDao.insert(*fakeToc.toTypedArray())
+
                         ReadBook.onChapterListUpdated(book)
                     }
                     bookData.postValue(book)
-                    chapterListData.postValue(it)
+
+                    // 【测试修改】强行删掉网络返回的前两章，模拟网站黑屋：
+                    chapterListData.postValue(fakeToc)
                 }.onError {
                     chapterListData.postValue(emptyList())
                     AppLog.put("获取目录失败\n${it.localizedMessage}", it)

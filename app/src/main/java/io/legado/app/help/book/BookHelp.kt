@@ -91,6 +91,85 @@ object BookHelp {
     }
 
     /**
+     * 自动迁移和章节缓存重命名
+     * 当章节目录更新（插入、删除导致 index 偏移）时，根据新旧章节的 URL 对应关系，
+     * 将旧的缓存文件精确重命名为新 index 的文件名。
+     */
+    fun migrateTocCache(book: Book, oldToc: List<BookChapter>, newToc: List<BookChapter>) {
+        android.util.Log.d("TestMigrate", "migrateTocCache CALLED! oldToc=${oldToc.size}, newToc=${newToc.size}")
+        if (oldToc.isEmpty() || newToc.isEmpty() || book.isLocalTxt) {
+            android.util.Log.d("TestMigrate", "migrateTocCache RETURNED EARLY! isLocalTxt=${book.isLocalTxt}")
+            return
+        }
+
+        val cacheFolder = FileUtils.getPath(downloadDir, cacheFolderName, book.getFolderName())
+        val cacheDir = File(cacheFolder)
+        
+        AppLog.put("MigrateTocCache: oldToc=${oldToc.size}, newToc=${newToc.size}, dir=$cacheFolder")
+
+        if (!cacheDir.exists()) {
+            AppLog.put("MigrateTocCache: cacheDir does not exist!")
+            return
+        }
+        val files = cacheDir.listFiles()
+        if (files.isNullOrEmpty()) {
+            AppLog.put("MigrateTocCache: cacheDir is empty!")
+            return
+        }
+
+        // 仅处理符合缓存命名规则的文件，如 00010-a1b2c3d4e5f6g7h8.nb 或 .nr
+        val prefixPattern = Regex("^[0-9]{5}-[a-fA-F0-9]{16}$")
+
+        // 建立 URL 到 旧缓存前缀 的精确映射
+        val oldUrlToPrefix = HashMap<String, String>()
+        for (chapter in oldToc) {
+            val titleMD5 = MD5Utils.md5Encode16(chapter.title)
+            val prefix = String.format("%05d-%s", chapter.index, titleMD5)
+            oldUrlToPrefix[chapter.url] = prefix
+        }
+
+        val renameMap = HashMap<String, String>()
+
+        for (newChapter in newToc) {
+            val newTitleMD5 = MD5Utils.md5Encode16(newChapter.title)
+            val newPrefix = String.format("%05d-%s", newChapter.index, newTitleMD5)
+
+            val oldPrefix = oldUrlToPrefix[newChapter.url]
+            if (oldPrefix != null && oldPrefix != newPrefix) {
+                renameMap[oldPrefix] = newPrefix
+            } else if (oldPrefix == null) {
+                AppLog.put("MigrateTocCache: URL not in oldToc -> ${newChapter.url}")
+            }
+        }
+        
+        AppLog.put("MigrateTocCache: renameMap size=${renameMap.size}")
+
+        // 执行重命名迁移
+        if (renameMap.isNotEmpty()) {
+            for (file in files) {
+                if (!file.isFile) continue
+                val name = file.name
+                val dotIndex = name.lastIndexOf('.')
+                if (dotIndex > 0) {
+                    val prefix = name.substring(0, dotIndex)
+                    if (prefix.matches(prefixPattern)) {
+                        val suffix = name.substring(dotIndex)
+                        renameMap[prefix]?.let { newPrefix ->
+                            val newFile = File(cacheDir, newPrefix + suffix)
+                            if (!newFile.exists()) {
+                                val ok = file.renameTo(newFile)
+                                AppLog.put("MigrateTocCache: rename $name -> ${newFile.name}, ok=$ok")
+                            } else {
+                                AppLog.put("MigrateTocCache: rename $name failed, target exists")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 清除已删除书的缓存 解压缓存
      */
     suspend fun clearInvalidCache() {
