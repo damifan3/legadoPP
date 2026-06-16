@@ -185,7 +185,7 @@ jobs:
         run: |
           if [ "${{ env.type }}" == 'release' ]; then
             typeName="原包名"
-            sed -i "s/applicationIdSuffix.*/applicationIdSuffix ''/" $GITHUB_WORKSPACE/app/build.gradle
+            sed -i "s/applicationIdSuffix.*/applicationIdSuffix '.release'/" $GITHUB_WORKSPACE/app/build.gradle
           elif [ "${{ env.type }}" == 'releaseS' ]; then
             typeName="共存"
             sed -i "s/applicationIdSuffix.*/applicationIdSuffix '.releaseS'/" $GITHUB_WORKSPACE/app/build.gradle
