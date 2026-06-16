@@ -77,7 +77,7 @@ android {
             if (project.hasProperty("RELEASE_STORE_FILE")) {
                 signingConfig signingConfigs.myConfig
             }
-            applicationIdSuffix '.release'
+            applicationIdSuffix '.releaseS'
             if (getApplicationIdSuffix() == '.releaseA') {
                 manifestPlaceholders.put("app_name", "@string/app_name_a")
             } else if (getApplicationIdSuffix() == '.releaseS') {
@@ -89,6 +89,7 @@ android {
             minifyEnabled true
             shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'cronet-proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
         debug {
             if (project.hasProperty("RELEASE_STORE_FILE")) {

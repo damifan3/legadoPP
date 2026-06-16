@@ -18,3 +18,7 @@ package-lock.json
 .kotlin/
 .cxx
 .vscode
+.claude
+/bookSources
+/logCat
+*.log
