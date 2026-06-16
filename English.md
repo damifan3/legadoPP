@@ -1,124 +1,119 @@
 # [English](English.md) [中文](README.md)
-
-[![icon_android](https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/icon_android.png)](https://play.google.com/store/apps/details?id=io.legado.play.release)
-<a href="https://jb.gg/OpenSourceSupport" target="_blank">
-<img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg?_gl=1*135yekd*_ga*OTY4Mjg4NDYzLjE2Mzk0NTE3MzQ.*_ga_9J976DJZ68*MTY2OTE2MzM5Ny4xMy4wLjE2NjkxNjMzOTcuNjAuMC4w&_ga=2.257292110.451256242.1669085120-968288463.1639451734" alt="idea"/>
-</a>
 <div align="center">
-<img width="125" height="125" src="https://github.com/gedoor/legado/raw/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="legado"/>  
-  
-Legado / 开源阅读
-<br>
-<a href="https://gedoor.github.io" target="_blank">gedoor.github.io</a> / <a href="https://www.legado.top/" target="_blank">legado.top</a>
-<br>
-Legado is a free and open source novel reader for Android.
+  <a href="https://jb.gg/OpenSourceSupport" target="_blank">
+    <img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" alt="idea" style="vertical-align: middle; margin-right: 10px;"/>
+  </a>
+  <img src="https://gitee.com/lyc486/yuedu/raw/master/icon_android.png" alt="icon_android" style="vertical-align: middle;"/>
 </div>
 
-[![](https://img.shields.io/badge/-Contents:-696969.svg)](#contents) [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-) [![](https://img.shields.io/badge/-Download-F5F5F5.svg)](#Download-) [![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-) [![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-) [![](https://img.shields.io/badge/-Other-F5F5F5.svg)](#Other-) [![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-) [![](https://img.shields.io/badge/-Interface-F5F5F5.svg)](#Interface-)
+<div align="center">
+<img width="85" height="85" src="https://iili.io/CouAWva.png" alt="legado"/>
+<br>
+Legado·PP
+<br>
 
->New user?
->
->The software does not provide content, you need to add it manually, such as importing book sources, etc. 
->Take a look at [official help documentation](https://www.yuque.com/legado/wiki)，Maybe there's an answer you need inside.
+Legado Sigma is inherited from <a href="https://github.com/gedoor/legado" target="_blank">Legado</a>,
+and this project is a fork of Legado Sigma, adding more features and bug fixes on top of it.</div>
 
-# Function [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-)
+## Version Description
+- Beta Version: Has the same package name as the original version, can overwrite the original app, frequent updates.
+- Official Version: Updated whenever it reaches a stable stage.
+- Currently, multiple versions are included in each release:
 
-You can customize the book source, set your own rules, and capture web page data. The rules are simple and easy to understand. There are rules in the software. List bookshelf, grid bookshelf switch freely. The book source rules support search and discovery, and all the functions of finding books and reading books are all customized, making it easier to find books.
-* Custom ebook sources, set your own rules to capture web data, the rules are simple and easy to understand, the software has a rule description.
-* eBook sources rules support search and discovery, all find books and read books function all custom, find books more convenient.
-* Schedule updating your library for new chapters.
-* Online reading from web sources that can be imported in bulk
-* Local reading of Auto-download episodes.
-* Local reading of TXT or EPUB files
-* ebook Wishlist
-* Big text viewer. You can open eBook and txt in 1GB size
-* Automatic text replacement for removing ad in content
-* List bookshelf, grid bookshelf free to switch.
-* Subscription content, you can subscribe to any content you want to see, see what you want to see
-* A configurable reader with fonts, background, page transitions mode and other settings
-* Timer. Set interval time to listen ebook, time up, ebook  turn off completely.
-* TTS book reader. tts can optionally be install“smartvoice-4.1.0” or ”Speech Services by Google“  Give your baby a storybook to listen to and teach your baby to talk, 
-* Dark mode and E-Ink mode support and Web service support
-* Create backups to local or WebDav server
-* Decentralization web3
-* Support replacement purification, it is very convenient to remove the content of advertisement replacement.
-* Support local TXT, EPUB reading, manual browsing, intelligent scanning.
-* Support highly customized reading interface, switch font, color, background, line spacing, paragraph spacing, bold, simplified and traditional conversion.
-* Support multiple page turning modes, covering, emulating, sliding, scrolling, etc.
+| Original | Coexisting A | Sigma (Plus) | PlusPlus (This Project) |
+| --- | --- | --- | --- |
+| release | releaseA | releaseS | releasePP |
 
+The signatures are all the original Legado signatures, allowing for optional overwrite installation. However, please be **cautious and back up your data**!
+
+# Contents
+[![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-)
+[![](https://img.shields.io/badge/-Contents:-696969.svg)](#contents) 
+[![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-Main-Features-) 
+[![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-) 
+[![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-) 
+[![](https://img.shields.io/badge/-Other-F5F5F5.svg)](#Other-) 
+[![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-) 
+[![](https://img.shields.io/badge/-Interface-F5F5F5.svg)](#Interface-)
+
+# New Features [![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-)
+
+New features are welcome for testing, feel free to report issues.
+* **Scheduled Task System**: Ported the scheduled task framework from [legadoT](https://github.com/TaiYouWeb/legadoT) to Legado Sigma. Thanks to the original author!
+    > Never worry about forgetting to follow up on latest chapters every day.
+
+* **Chapter Identification & Cache Optimization**: Automatically renames the local cache when the table of contents changes, solving the cascade deletion issue.
+    > Very useful for collectors, prevents the cache from becoming invalid when a chapter enters the black room.
+* **Shortcut Navigation for Source Editing**: Introduced a shortcut navigation feature in the book source editing interface, extracting it as a reusable component.
+    > No more sore thumbs scrolling up and down while editing book sources.
+
+
+# Function-Main Features [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-Main-Features-)
+[中文](README.md)
+
+> New User?<br>
+> This app does not provide content. You need to manually add content yourself, such as importing book sources.
+> Check out the [Official Help Documentation](https://www.yuque.com/legado/wiki) (in Chinese), maybe you can find the answers you need there.
+
+1. Custom book sources: Set your own rules to scrape web data. The rules are easy to understand and explained within the app.<br>
+2. Switch freely between list and grid bookshelf views.<br>
+3. Source rules support searching and discovering. All finding and reading functions are fully customizable to make finding books easier.<br>
+4. Subscribe to content: You can subscribe to whatever you want to read, read whatever you like.<br>
+5. Supports text replacement and purification, easily removing ads or replacing specific content.<br>
+6. Supports local TXT and EPUB reading, manual browsing, and intelligent scanning.<br>
+7. Highly customizable reading interface: Change fonts, colors, backgrounds, line spacing, paragraph spacing, bolding, Simplified/Traditional Chinese conversion, etc.<br>
+8. Supports multiple page-turning modes: Overlap, Simulation, Slide, Scroll, etc.<br>
+9. Open-source software, continuously optimized, ad-free.
 
 <a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
-</a>
-
-# Download [![](https://img.shields.io/badge/-Download-F5F5F5.svg)](#Download-)
-
-#### Android
-
-* [Releases](https://github.com/gedoor/legado/releases/latest)
-* [Google play - $1.99](https://play.google.com/store/apps/details?id=io.legado.play.release)
-* [Coolapk](https://www.coolapk.com/apk/io.legado.app.release)
-* [\#Beta](https://kunfei.lanzoui.com/b0f810h4b)
-* [IzzyOnDroid F-Droid Repository](https://apt.izzysoft.de/fdroid/index/apk/io.legado.app.release)
-
-
-#### IOS
-
-* Stopped(No release) - [Github](https://github.com/gedoor/YueDuFlutter)
-
-<a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
+    <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
 # Community [![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-)
 
 #### Telegram
+[![Telegram-channel](https://img.shields.io/badge/Σ_Telegram-Channel-blue)](https://t.me/readsigma)
 
-[![Telegram-group](https://img.shields.io/badge/Telegram-group-blue)](https://t.me/yueduguanfang) [![Telegram-channel](https://img.shields.io/badge/Telegram-channel-blue)](https://t.me/legado_channels)
+#### WeChat
+[![WeChat-channel](https://img.shields.io/badge/Σ_WeChat-Official_Account-green)](https://mp.weixin.qq.com/s/f54f7yP9HQi6P5Wky8wE1A)  
+<img src="https://open.weixin.qq.com/qr/code?username=legado_plus" width="100">
 
 #### Discord
-
 [![Discord](https://img.shields.io/discord/560731361414086666?color=%235865f2&label=Discord)](https://discord.gg/VtUfRyzRXn)
 
 #### Other
-
 https://www.yuque.com/legado/wiki/community
 
 <a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
+    <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
 # API [![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-)
-
-* Legado 3.0 The API is provided in 2 ways: `Web way` and `Content Provider way`. You can call it yourself as needed in [here](api.md). 
-* One-click import by url recall reading, url format: legado://import/{path}?src={url}
-* Path Type: bookSource,rssSource,replaceRule,textTocRule,httpTTS,theme,readConfig,dictRule,addToBookshelf
-* path type explanation: Book source, subscription source, replacement rules, local txt novel directory rules, online reading engine, theme, reading layout, [add to bookshelf](/app/src/main/java/io/legado/app/ui/association/AddToBookshelfDialog.kt)
+* Legado 3.0 provides two types of APIs: `Web API` and `Content Provider API`. You can call them as needed [here](api.md).
+* You can invoke the app via URL for one-click import. URL format: `legado://import/{path}?src={url}`
+* Path types: `bookSource`, `rssSource`, `replaceRule`, `textTocRule`, `httpTTS`, `theme`, `readConfig`, `dictRule`, [`addToBookshelf`](/app/src/main/java/io/legado/app/ui/association/AddToBookshelfDialog.kt)
+* Path type explanation: book source, RSS source, replace rule, local TXT novel TOC rule, online TTS engine, theme, reading layout, add to bookshelf.
 
 <a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
+    <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
 # Other [![](https://img.shields.io/badge/-Other-F5F5F5.svg)](#Other-)
-
-##### Disclaimers
-
+##### Disclaimer
 https://gedoor.github.io/Disclaimer
 
 ##### Legado 3.0
-
-* [eBook sources rules](https://mgz0227.github.io/The-tutorial-of-Legado/)
+* [Book Source Rules](https://mgz0227.github.io/The-tutorial-of-Legado/)
 * [Update Log](/app/src/main/assets/updateLog.md)
 * [Help Documentation](/app/src/main/assets/web/help/md/appHelp.md)
-* [web bookshelf](https://github.com/gedoor/legado_web_bookshelf)
-* [web source editor](https://github.com/gedoor/legado_web_source_editor)
+* [Web Bookshelf](https://github.com/gedoor/legado_web_bookshelf)
+* [Web Source Editor](https://github.com/gedoor/legado_web_source_editor)
 
 <a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
+    <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
 # Grateful [![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-)
-
 > * org.jsoup:jsoup
 > * cn.wanghaomiao:JsoupXpath
 > * com.jayway.jsonpath:json-path
@@ -134,16 +129,17 @@ https://gedoor.github.io/Disclaimer
 > * io.noties.markwon:image-glide
 > * com.hankcs:hanlp
 > * com.positiondev.epublib:epublib-core
+> * com.github.Moriafly:LyricViewX
+> * io.github.rosemoe:editor
 
 <a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
+    <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
 # Interface [![](https://img.shields.io/badge/-Interface-F5F5F5.svg)](#Interface-)
-
 <img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B1.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B2.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B3.jpg" width="270">
 <img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B4.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B5.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B6.jpg" width="270">
 
 <a href="#readme">
-    <img src="https://img.shields.io/badge/-Top-orange.svg" alt="#" align="right">
+    <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
