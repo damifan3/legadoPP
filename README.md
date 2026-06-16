@@ -1,36 +1,63 @@
 # [English](English.md) [中文](README.md)
-
-![icon_android](https://gitee.com/lyc486/yuedu/raw/master/icon_android.png)
-<a href="https://jb.gg/OpenSourceSupport" target="_blank">
-<img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg?_gl=1*135yekd*_ga*OTY4Mjg4NDYzLjE2Mzk0NTE3MzQ.*_ga_9J976DJZ68*MTY2OTE2MzM5Ny4xMy4wLjE2NjkxNjMzOTcuNjAuMC4w&_ga=2.257292110.451256242.1669085120-968288463.1639451734" alt="idea"/>
-</a>
+<div align="center">
+  <a href="https://jb.gg/OpenSourceSupport" target="_blank">
+    <img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" alt="idea" style="vertical-align: middle; margin-right: 10px;"/>
+  </a>
+  <img src="https://gitee.com/lyc486/yuedu/raw/master/icon_android.png" alt="icon_android" style="vertical-align: middle;"/>
+</div>
 
 <div align="center">
-<img width="125" height="125" src="https://github.com/gedoor/legado/raw/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="legado"/>
+<img width="85" height="85" src="https://iili.io/CouAWva.png" alt="legado"/>
 <br>
-阅读Sigma
+阅读·PP
 <br>
-<a href="https://loyc.xyz/c/legado.html" target="_blank">软件介绍页</a>
-<br>
-阅读Sigma继承自<a href="https://github.com/gedoor/legado" target="_blank">Legado</a>，在其基础上新增更多功能。
-</div>
+
+阅读 Sigma 继承自 <a href="https://github.com/gedoor/legado" target="_blank">Legado</a>，
+本项目又是阅读 Sigma 的一个 fork，在其基础上新增更多功能和修复问题。</div>
 
 ## 版本说明
 - 测试版(beta)：包名与原版相同，可覆盖更新，版本更新频繁
-- 正式版(plus)：新的共存包名，安装后是一个新软件，不会覆盖原版，每到一个稳定阶段进行一次更新
-#### 找不到下载地址可以去这里 [下载软件](https://gitee.com/lyc486/legado/releases)
+- 正式版：每到一个稳定阶段进行一次更新
+- 目前每次发布包含多个版本：
 
-[![](https://img.shields.io/badge/-Contents:-696969.svg)](#contents) [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-主要功能-) [![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-交流社区-) [![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-) [![](https://img.shields.io/badge/-Other-F5F5F5.svg)](#Other-其他-) [![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-感谢-) [![](https://img.shields.io/badge/-Interface-F5F5F5.svg)](#Interface-界面-)
+| 原版 | 共存A | Sigma(Plus) | PlusPlus(本项目) |
+| --- | --- | --- | --- |
+| release | releaseA | releaseS | releasePP |
 
->新用户？
->
->软件不提供内容，需要您自己手动添加，例如导入书源等。
->看看 [官方帮助文档](https://www.yuque.com/legado/wiki)，也许里面就有你要的答案。
+签名都是 Legado 原版签名，可选覆盖安装，但是要**谨慎+备份**！
+
+# 目录
+[![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-新功能-)
+[![](https://img.shields.io/badge/-Contents:-696969.svg)](#contents) 
+[![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-主要功能-) 
+[![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-交流社区-) 
+[![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-) 
+[![](https://img.shields.io/badge/-Other-F5F5F5.svg)](#Other-其他-) 
+[![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-感谢-) 
+[![](https://img.shields.io/badge/-Interface-F5F5F5.svg)](#Interface-界面-)
+
+
+# New Features-新功能 [![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-新功能-)
+
+新功能欢迎测试，欢迎报告issue。
+* **定时任务系统**: 移植了[legadoT](https://github.com/TaiYouWeb/legadoT)的定时任务框架到阅读 Sigma。感谢原作者！
+    > 每天再也不用担心忘了追更。
+
+* **章节识别与缓存优化**: 实现目录变动时本地缓存自动重命名，解决级联删除问题。
+    > 对收藏党非常有用，防止小黑屋使缓存失效：
+* **书源编辑快捷导航**: 在书源编辑界面引入快捷导航功能，将其提取为可复用组件。
+    > 书源编辑再也不用划到手酸了。
+
 
 # Function-主要功能 [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-主要功能-)
 [English](English.md)
 
 <details><summary>中文</summary>
+
+>新用户？<br>
+>软件不提供内容，需要您自己手动添加，例如导入书源等。
+>看看 [官方帮助文档](https://www.yuque.com/legado/wiki)，也许里面就有你要的答案。
+
 1.自定义书源，自己设置规则，抓取网页数据，规则简单易懂，软件内有规则说明。<br>
 2.列表书架，网格书架自由切换。<br>
 3.书源规则支持搜索及发现，所有找书看书功能全部自定义，找书更方便。<br>
