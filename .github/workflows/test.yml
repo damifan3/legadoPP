@@ -137,9 +137,9 @@ jobs:
       - id: set-matrix
         run: |
           if [ "${{ steps.updateLog.outputs.updated }}" == "yes" ]; then
-            echo 'build_matrix={"product":["app"],"type":["release","releaseS"]}' >> $GITHUB_OUTPUT
+            echo 'build_matrix={"product":["app"],"type":["release","releaseS","releasePP","releaseA"]}' >> $GITHUB_OUTPUT
           else
-            echo 'build_matrix={"product":["app"],"type":["release"]}' >> $GITHUB_OUTPUT
+            echo 'build_matrix={"product":["app"],"type":["release","releaseS","releasePP","releaseA"]}' >> $GITHUB_OUTPUT
           fi
 
   build:
@@ -185,10 +185,16 @@ jobs:
         run: |
           if [ "${{ env.type }}" == 'release' ]; then
             typeName="原包名"
-          else
+            sed -i "s/applicationIdSuffix.*/applicationIdSuffix ''/" $GITHUB_WORKSPACE/app/build.gradle
+          elif [ "${{ env.type }}" == 'releaseS' ]; then
             typeName="共存"
-            sed "s/'.release'/'.releaseS'/" $GITHUB_WORKSPACE/app/build.gradle  -i
-            # sed 's/.release/.releaseS/'     $GITHUB_WORKSPACE/app/google-services.json -i
+            sed -i "s/applicationIdSuffix.*/applicationIdSuffix '.releaseS'/" $GITHUB_WORKSPACE/app/build.gradle
+          elif [ "${{ env.type }}" == 'releasePP' ]; then
+            typeName="PP"
+            sed -i "s/applicationIdSuffix.*/applicationIdSuffix '.releasePP'/" $GITHUB_WORKSPACE/app/build.gradle
+          elif [ "${{ env.type }}" == 'releaseA' ]; then
+            typeName="A"
+            sed -i "s/applicationIdSuffix.*/applicationIdSuffix '.releaseA'/" $GITHUB_WORKSPACE/app/build.gradle
           fi
           echo "统一版本号"
           sed "/def version/c def version = \"${{ env.VERSION }}\"" $GITHUB_WORKSPACE/app/build.gradle  -i
@@ -198,10 +204,10 @@ jobs:
           echo "修改APK文件名"
           mkdir -p ${{ github.workspace }}/apk/
           for file in `ls ${{ github.workspace }}/app/build/outputs/apk/*/*/*.apk`; do
-            if [ "${{ env.type }}" == 'release' ]; then
-              mv "$file" ${{ github.workspace }}/apk/legado_测试版_${{ env.VERSIONL }}_$typeName.apk
-            else
+            if [ "${{ needs.prepare.outputs.updateLog_updated }}" == "yes" ]; then
               mv "$file" ${{ github.workspace }}/apk/legado_正式版_${{ env.VERSIONL }}_$typeName.apk
+            else
+              mv "$file" ${{ github.workspace }}/apk/legado_测试版_${{ env.VERSIONL }}_$typeName.apk
             fi
           done
           echo "移动mapping文件"
@@ -253,7 +259,7 @@ jobs:
 
   prerelease:
     needs: [ prepare, build ]
-    if: github.event_name != 'pull_request' && github.repository == 'Luoyacheng/legado'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
@@ -273,8 +279,12 @@ jobs:
           for file in `ls *.apk`; do
             if [[ "$file" == *原包名* ]]; then
               mv "$file" $(echo $file | sed -e s/原包名/release/ -e s/测试版/beta/)
-            else
-              mv "$file" $(echo $file | sed -e s/共存/releaseS/ -e s/正式版/plus/)
+            elif [[ "$file" == *共存* ]]; then
+              mv "$file" $(echo $file | sed -e s/共存/releaseS/ -e s/正式版/plus/ -e s/测试版/beta_plus/)
+            elif [[ "$file" == *PP* ]]; then
+              mv "$file" $(echo $file | sed -e s/PP/releasePP/ -e s/正式版/plus_pp/ -e s/测试版/beta_pp/)
+            elif [[ "$file" == *A* ]]; then
+              mv "$file" $(echo $file | sed -e s/A/releaseA/ -e s/正式版/plus_a/ -e s/测试版/beta_a/)
             fi
           done
 
