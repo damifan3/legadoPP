@@ -88,4 +88,9 @@
         android:title="@string/log"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_auto_task"
+        android:title="@string/auto_task_book_update"
+        app:showAsAction="never" />
+
 </menu>
