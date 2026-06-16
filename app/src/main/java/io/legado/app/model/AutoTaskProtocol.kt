@@ -129,7 +129,6 @@ object AutoTaskProtocol {
 
         // 记录刷新前的章节列表（用于后续计算新增章节）
         val beforeList = appDb.bookChapterDao.getChapterList(bookUrl)
-        val beforeCount = beforeList.size
         val beforeUrls = beforeList.map { it.url }.toSet()
 
         // 执行目录刷新
@@ -140,8 +139,10 @@ object AutoTaskProtocol {
 
         // 获取刷新后的章节列表
         val afterList = appDb.bookChapterDao.getChapterList(bookUrl)
-        val afterCount = afterList.size
-        val newCount = (afterCount - beforeCount).coerceAtLeast(0)
+        
+        // 找出新增的章节（本次刷新新出现的章节）
+        val newChapters = afterList.filter { it.url !in beforeUrls }
+        val newCount = newChapters.size
 
         // 解析通知配置
         val notifyObj = getMap(action, "notify")
@@ -177,14 +178,13 @@ object AutoTaskProtocol {
             val payAction = source?.getContentRule()?.payAction
 
             if (!payAction.isNullOrBlank()) {
-                // 找出新增的章节（本次刷新新出现的章节）
-                val newChapters = afterList
-                    .filter { it.url !in beforeUrls }  // 仅新增章节
+                // 找出新增的VIP且未购买章节
+                val purchaseChapters = newChapters
                     .filter { it.isVip && !it.isPay }   // 仅 VIP 且未购买的
                     .take(purchaseMaxCount)              // 限制最大购买数量
 
                 // 遍历新增章节执行购买
-                for (chapter in newChapters) {
+                for (chapter in purchaseChapters) {
                     try {
                         // 执行书源的支付动作 JS（使用 BaseSource.evalJS）
                         val result = source.evalJS(payAction) {
@@ -220,13 +220,22 @@ object AutoTaskProtocol {
 
         // 缓存新章节
         var cacheCount = 0
-        if (shouldCache) {
-            val start = beforeCount
-            val end = afterCount - 1
-            if (start <= end && !book.isLocal) {
-                CacheBook.start(context, book, start, end)
-                cacheCount = end - start + 1
+        if (shouldCache && !book.isLocal && newChapters.isNotEmpty()) {
+            val indices = newChapters.map { it.index }.sorted()
+            var start = indices.first()
+            var end = start
+            for (i in 1 until indices.size) {
+                val current = indices[i]
+                if (current == end + 1) {
+                    end = current
+                } else {
+                    CacheBook.start(context, book, start, end)
+                    start = current
+                    end = current
+                }
             }
+            CacheBook.start(context, book, start, end)
+            cacheCount = newChapters.size
         }
 
         // 发送更新及购买结果通知
@@ -326,16 +335,16 @@ object AutoTaskProtocol {
             context.getString(R.string.auto_task_book_update_content, newCount, latestTitle)
         }
 
-        val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time)
-        var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time)
+        val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
+        var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
 
         //增加的购买信息必须放在 contentTpl ?: defaultContent 后边，不然会被用户定义模板取代。
-        if (purchaseCount > 0 ) {
-            content += "\n自动购买成功: ${purchaseCount}章"
-        }
-        if (purchaseFailCount > 0 ) {
-            content += "\n自动购买失败: ${purchaseFailCount}章"
-        }
+//        if (purchaseCount > 0 ) {
+//            content += "\n自动购买成功: ${purchaseCount}章"
+//        }
+//        if (purchaseFailCount > 0 ) {
+//            content += "\n自动购买失败: ${purchaseFailCount}章"
+//        }
 
         // 计算通知 ID（基于书籍 URL 哈希）
         val notifyId = NotificationId.AutoTaskBookUpdateBase +
@@ -506,7 +515,7 @@ object AutoTaskProtocol {
     // ==================== 模板格式化方法 ====================
 
     /**
-     * 格式化书籍更新模板
+     * 格式化书籍更新模板，将用户脚本中的变量替换为真实值
      * 支持变量：{book}, {author}, {newCount}, {chapter}, {time}
      */
     private fun formatTemplate(
@@ -514,7 +523,9 @@ object AutoTaskProtocol {
         book: Book,
         newCount: Int,
         latestTitle: String?,
-        time: String
+        time: String,
+        purchaseCount: Int,
+        purchaseFailCount: Int
     ): String {
         return template
             .replace("{book}", book.name)
@@ -522,6 +533,8 @@ object AutoTaskProtocol {
             .replace("{newCount}", newCount.toString())
             .replace("{chapter}", latestTitle.orEmpty())
             .replace("{time}", time)
+            .replace("{purchaseCount}", purchaseCount.toString())
+            .replace("{purchaseFailCount}", purchaseFailCount.toString())
     }
 
     /**
