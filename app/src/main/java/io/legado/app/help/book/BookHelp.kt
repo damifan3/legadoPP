@@ -96,24 +96,18 @@ object BookHelp {
      * 将旧的缓存文件精确重命名为新 index 的文件名。
      */
     fun migrateTocCache(book: Book, oldToc: List<BookChapter>, newToc: List<BookChapter>) {
-        android.util.Log.d("TestMigrate", "migrateTocCache CALLED! oldToc=${oldToc.size}, newToc=${newToc.size}")
         if (oldToc.isEmpty() || newToc.isEmpty() || book.isLocalTxt) {
-            android.util.Log.d("TestMigrate", "migrateTocCache RETURNED EARLY! isLocalTxt=${book.isLocalTxt}")
             return
         }
 
         val cacheFolder = FileUtils.getPath(downloadDir, cacheFolderName, book.getFolderName())
         val cacheDir = File(cacheFolder)
-        
-        AppLog.put("MigrateTocCache: oldToc=${oldToc.size}, newToc=${newToc.size}, dir=$cacheFolder")
 
         if (!cacheDir.exists()) {
-            AppLog.put("MigrateTocCache: cacheDir does not exist!")
             return
         }
         val files = cacheDir.listFiles()
         if (files.isNullOrEmpty()) {
-            AppLog.put("MigrateTocCache: cacheDir is empty!")
             return
         }
 
@@ -137,12 +131,8 @@ object BookHelp {
             val oldPrefix = oldUrlToPrefix[newChapter.url]
             if (oldPrefix != null && oldPrefix != newPrefix) {
                 renameMap[oldPrefix] = newPrefix
-            } else if (oldPrefix == null) {
-                AppLog.put("MigrateTocCache: URL not in oldToc -> ${newChapter.url}")
             }
         }
-        
-        AppLog.put("MigrateTocCache: renameMap size=${renameMap.size}")
 
         // 执行重命名迁移
         if (renameMap.isNotEmpty()) {
@@ -157,10 +147,7 @@ object BookHelp {
                         renameMap[prefix]?.let { newPrefix ->
                             val newFile = File(cacheDir, newPrefix + suffix)
                             if (!newFile.exists()) {
-                                val ok = file.renameTo(newFile)
-                                AppLog.put("MigrateTocCache: rename $name -> ${newFile.name}, ok=$ok")
-                            } else {
-                                AppLog.put("MigrateTocCache: rename $name failed, target exists")
+                                file.renameTo(newFile)
                             }
                         }
                     }
