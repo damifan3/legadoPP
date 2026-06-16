@@ -22,3 +22,4 @@ package-lock.json
 /bookSources
 /logCat
 *.log
+/.agents
