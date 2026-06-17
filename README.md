@@ -1,3 +1,4 @@
+<a id="top"></a>
 # [English](English.md) [中文](README.md)
 <div align="center">
   <a href="https://jb.gg/OpenSourceSupport" target="_blank">
