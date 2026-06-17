@@ -27,8 +27,9 @@
 签名都是 Legado 原版签名，可选覆盖安装，但是要**谨慎+备份**！
 
 # 目录
+
+[![](https://img.shields.io/badge/-Contents:-696969.svg)](#目录) 
 [![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-新功能-)
-[![](https://img.shields.io/badge/-Contents:-696969.svg)](#contents) 
 [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-主要功能-) 
 [![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-交流社区-) 
 [![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-) 
@@ -69,7 +70,7 @@
 9.软件开源，持续优化，无广告。
 </details>
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 </a>
 
@@ -80,7 +81,6 @@
 
 #### WeChat
 [![WeChat-channel](https://img.shields.io/badge/Σ_%e5%be%ae%e4%bf%a1-%e5%85%ac%e4%bc%97%e5%8f%b7-green)](https://mp.weixin.qq.com/s/f54f7yP9HQi6P5Wky8wE1A)  
-<img src="https://open.weixin.qq.com/qr/code?username=legado_plus" width="100">
 
 #### Discord
 [![Discord](https://img.shields.io/discord/560731361414086666?color=%235865f2&label=Discord)](https://discord.gg/VtUfRyzRXn)
@@ -88,7 +88,7 @@
 #### Other
 https://www.yuque.com/legado/wiki/community
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 </a>
 
@@ -98,7 +98,7 @@ https://www.yuque.com/legado/wiki/community
 * path类型: bookSource,rssSource,replaceRule,textTocRule,httpTTS,theme,readConfig,dictRule,[addToBookshelf](/app/src/main/java/io/legado/app/ui/association/AddToBookshelfDialog.kt)
 * path类型解释: 书源,订阅源,替换规则,本地txt小说目录规则,在线朗读引擎,主题,阅读排版,添加到书架
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 </a>
 
@@ -113,7 +113,7 @@ https://gedoor.github.io/Disclaimer
 * [web端书架](https://github.com/gedoor/legado_web_bookshelf)
 * [web端源编辑](https://github.com/gedoor/legado_web_source_editor)
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 </a>
 
@@ -135,7 +135,7 @@ https://gedoor.github.io/Disclaimer
 > * com.positiondev.epublib:epublib-core
 > * com.github.Moriafly:LyricViewX
 > * io.github.rosemoe:editor
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 </a>
 
@@ -143,6 +143,6 @@ https://gedoor.github.io/Disclaimer
 <img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B1.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B2.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B3.jpg" width="270">
 <img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B4.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B5.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B6.jpg" width="270">
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
 </a>

@@ -27,8 +27,9 @@ and this project is a fork of Legado Sigma, adding more features and bug fixes o
 The signatures are all the original Legado signatures, allowing for optional overwrite installation. However, please be **cautious and back up your data**!
 
 # Contents
-[![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-)
+
 [![](https://img.shields.io/badge/-Contents:-696969.svg)](#contents) 
+[![](https://img.shields.io/badge/-New-F5F5F5.svg)](#New-Features-)
 [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-Main-Features-) 
 [![](https://img.shields.io/badge/-Community-F5F5F5.svg)](#Community-) 
 [![](https://img.shields.io/badge/-API-F5F5F5.svg)](#API-) 
@@ -65,7 +66,7 @@ New features are welcome for testing, feel free to report issues.
 8. Supports multiple page-turning modes: Overlap, Simulation, Slide, Scroll, etc.<br>
 9. Open-source software, continuously optimized, ad-free.
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
@@ -76,7 +77,7 @@ New features are welcome for testing, feel free to report issues.
 
 #### WeChat
 [![WeChat-channel](https://img.shields.io/badge/Σ_WeChat-Official_Account-green)](https://mp.weixin.qq.com/s/f54f7yP9HQi6P5Wky8wE1A)  
-<img src="https://open.weixin.qq.com/qr/code?username=legado_plus" width="100">
+
 
 #### Discord
 [![Discord](https://img.shields.io/discord/560731361414086666?color=%235865f2&label=Discord)](https://discord.gg/VtUfRyzRXn)
@@ -84,7 +85,7 @@ New features are welcome for testing, feel free to report issues.
 #### Other
 https://www.yuque.com/legado/wiki/community
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
@@ -94,7 +95,7 @@ https://www.yuque.com/legado/wiki/community
 * Path types: `bookSource`, `rssSource`, `replaceRule`, `textTocRule`, `httpTTS`, `theme`, `readConfig`, `dictRule`, [`addToBookshelf`](/app/src/main/java/io/legado/app/ui/association/AddToBookshelfDialog.kt)
 * Path type explanation: book source, RSS source, replace rule, local TXT novel TOC rule, online TTS engine, theme, reading layout, add to bookshelf.
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
@@ -109,7 +110,7 @@ https://gedoor.github.io/Disclaimer
 * [Web Bookshelf](https://github.com/gedoor/legado_web_bookshelf)
 * [Web Source Editor](https://github.com/gedoor/legado_web_source_editor)
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
@@ -132,7 +133,7 @@ https://gedoor.github.io/Disclaimer
 > * com.github.Moriafly:LyricViewX
 > * io.github.rosemoe:editor
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
 
@@ -140,6 +141,6 @@ https://gedoor.github.io/Disclaimer
 <img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B1.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B2.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B3.jpg" width="270">
 <img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B4.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B5.jpg" width="270"><img src="https://github.com/gedoor/gedoor.github.io/blob/master/static/img/legado/%E9%98%85%E8%AF%BB%E7%AE%80%E4%BB%8B6.jpg" width="270">
 
-<a href="#readme">
+<a href="#top">
     <img src="https://img.shields.io/badge/-Back%20To%20Top-orange.svg" alt="#" align="right">
 </a>
