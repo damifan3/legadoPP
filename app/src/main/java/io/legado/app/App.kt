@@ -19,6 +19,7 @@ import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.AppConst.channelIdDownload
 import io.legado.app.constant.AppConst.channelIdReadAloud
 import io.legado.app.constant.AppConst.channelIdWeb
+import io.legado.app.constant.AppConst.channelIdAutoTask
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -215,12 +216,25 @@ class App : Application() {
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
 
+        //注册新的渠道，并将它加入到系统的 NotificationManager 中
+        val autoTaskChannel = NotificationChannel(
+            channelIdAutoTask,
+            getString(R.string.auto_task_service),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            enableLights(false)
+            enableVibration(false)
+            setSound(null, null)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+
         //向notification manager 提交channel
         notificationManager.createNotificationChannels(
             listOf(
                 downloadChannel,
                 readAloudChannel,
-                webChannel
+                webChannel,
+                autoTaskChannel
             )
         )
     }
