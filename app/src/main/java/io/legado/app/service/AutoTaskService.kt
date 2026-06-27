@@ -139,7 +139,7 @@ class AutoTaskService : BaseService() {
 
     // 通知构建器（懒加载）
     private val notificationBuilder by lazy {
-        NotificationCompat.Builder(this, AppConst.channelIdWeb)
+        NotificationCompat.Builder(this, AppConst.channelIdAutoTask)
             .setSmallIcon(R.drawable.ic_web_service_noti)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
