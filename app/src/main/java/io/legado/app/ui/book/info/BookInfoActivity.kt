@@ -1199,7 +1199,8 @@ class BookInfoActivity :
         val cacheEnabled: Boolean,
         val autoPay: Boolean,
         val autoPayMaxCount: Int,
-        val intervalHours: Int
+        val intervalHours: Int,
+        val isCustomScript: Boolean
     )
 
     /**
@@ -1212,10 +1213,20 @@ class BookInfoActivity :
      */
     private fun showAutoTaskDialog() {
         val book = viewModel.getBook() ?: return
+
+        //自动生成的 任务 ID（格式：book_update:MD5哈希）
         val taskId = AutoTask.bookTaskId(book.bookUrl)
-        val existing = AutoTask.getRules().firstOrNull { it.id == taskId }
+
+        //不光要适配自动生成的ID，还要适配手动编辑任务生成的随机UUID
+        //TODO：这里直接使用 script 是否包含 bookurl来判断是否是同一个书的脚本，可能欠妥
+        val existing = AutoTask.getRules().firstOrNull { 
+            it.id == taskId || it.script.contains(book.bookUrl)
+        }
         val config = parseBookAutoTaskConfig(existing, book.bookUrl)
         val dialogBinding = DialogBookAutoTaskBinding.inflate(layoutInflater)
+        if (config.isCustomScript) {
+            dialogBinding.tvCustomScriptWarning.visibility = android.view.View.VISIBLE
+        }
         dialogBinding.switchEnable.isChecked = config.enabled
         dialogBinding.switchNotify.isChecked = config.notifyEnabled
         dialogBinding.switchCache.isChecked = config.cacheEnabled
@@ -1244,13 +1255,11 @@ class BookInfoActivity :
                 )
                 val displayName = book.name.ifBlank { book.bookUrl }
                 val updated = (existing ?: AutoTaskRule(id = taskId)).copy(
-                    id = taskId,
-                    name = getString(R.string.auto_task_book_update_name, displayName),
+                    id = existing?.id ?: taskId,
+                    name = existing?.name ?: getString(R.string.auto_task_book_update_name, displayName),
                     enable = enabled,
                     cron = cron,
-                    script = script,
-                    autoPay = autoPay,
-                    autoPayMaxCount = autoPayMaxCount
+                    script = script
                 )
                 AutoTask.upsert(updated)
                 LocalConfig.bookAutoTaskIntervalHours = hours
@@ -1278,30 +1287,48 @@ class BookInfoActivity :
                 cacheEnabled = false,
                 autoPay = false,
                 autoPayMaxCount = 10,
-                intervalHours = cachedOrDefaultIntervalHours
+                intervalHours = cachedOrDefaultIntervalHours,
+                isCustomScript = false
             )
         }
         val interval = parseCronHours(task.cron)
             ?: cachedOrDefaultIntervalHours
         var notifyEnabled = true
         var cacheEnabled = false
+        var autoPay = false
+        var autoPayMaxCount = 10
+        var isCustomScript = false
         val json = extractTaskJson(task.script)
         if (!json.isNullOrBlank()) {
-            val root = GSON.fromJsonObject<Map<String, Any?>>(json).getOrNull()
-            val action = findRefreshAction(root, bookUrl)
-            val notify = toStringKeyMap(action?.get("notify"))
-            val cache = toStringKeyMap(action?.get("cache"))
-            val purchase = toStringKeyMap(action?.get("purchase"))
-            notifyEnabled = readBoolean(notify, "enable", true)
-            cacheEnabled = readBoolean(cache, "enable", false)
+            val result = GSON.fromJsonObject<Map<String, Any?>>(json)
+            val root = result.getOrNull()
+            if (root != null) {
+                val action = findRefreshAction(root, bookUrl)
+                if (action != null) {
+                    val notify = toStringKeyMap(action["notify"])
+                    val cache = toStringKeyMap(action["cache"])
+                    val purchase = toStringKeyMap(action["purchase"])
+                    notifyEnabled = readBoolean(notify, "enable", true)
+                    cacheEnabled = readBoolean(cache, "enable", false)
+                    autoPay = readBoolean(purchase, "enable", false)
+                    autoPayMaxCount = readInt(purchase, "maxCount", 10)
+                } else {
+                    isCustomScript = true
+                }
+            } else {
+                isCustomScript = true
+            }
+        } else if (!task.script.isNullOrBlank()) {
+            isCustomScript = true
         }
         return BookAutoTaskConfig(
             enabled = task.enable,
             notifyEnabled = notifyEnabled,
             cacheEnabled = cacheEnabled,
-            autoPay = task.autoPay,
-            autoPayMaxCount = task.autoPayMaxCount,
-            intervalHours = interval
+            autoPay = autoPay,
+            autoPayMaxCount = autoPayMaxCount,
+            intervalHours = interval,
+            isCustomScript = isCustomScript
         )
     }
 
@@ -1341,7 +1368,7 @@ class BookInfoActivity :
     }
 
     /**
-     * 从脚本中提取 JSON 内容
+     * 按不同优先级从脚本中提取 JSON 内容，返回匹配到的第一种
      */
     private fun extractTaskJson(script: String?): String? {
         if (script.isNullOrBlank()) return null
@@ -1349,6 +1376,11 @@ class BookInfoActivity :
         val trimmed = normalized.trim()
         val assignMatch = Regex("^(?:var|let|const)\\s+[\\w$]+\\s*=\\s*(.+)$", RegexOption.DOT_MATCHES_ALL)
             .find(trimmed)
+        /*匹配形如：
+        var task = {"type": "refreshToc"}
+        let x = [1, 2, 3];
+        const data = Object.assign({}, base)  // unwrapJsonExpression 处理这类情况
+        */
         if (assignMatch != null) {
             val assigned = assignMatch.groupValues[1].trim()
             val first = assigned.substringBefore(";").trim()
@@ -1357,15 +1389,36 @@ class BookInfoActivity :
                 return inner
             }
         }
+
+        /*匹配形如：
+        ({"type": "refreshToc", "bookUrl": "..."})
+        直接剥掉外层括号
+        */
         if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
             val inner = trimmed.substring(1, trimmed.length - 1).trim()
             if (inner.startsWith("{") || inner.startsWith("[")) {
                 return inner
             }
         }
+
+        /*匹配形如：
+        {"type": "refreshToc"}
+        最简单的情况，直接返回。
+         */
         if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
             return trimmed
         }
+
+        /*匹配形如：
+        javascriptfunction getTask() {
+            return {"type": "refreshToc"};
+        }
+        和形如：
+        (function(){
+            return {};
+        })()
+        找到 return 关键字，截取其后的内容（直到 ;），不再校验是否以 {/[ 开头，直接返回——这是兜底策略，比前三种宽松。
+         */
         val index = trimmed.indexOf("return")
         if (index < 0) return null
         val after = trimmed.substring(index + 6).trim()
@@ -1450,6 +1503,19 @@ class BookInfoActivity :
             is Boolean -> value
             is Number -> value.toInt() != 0
             is String -> value.equals("true", true) || value == "1"
+            else -> defaultValue
+        }
+    }
+
+    private fun readInt(
+        map: Map<String, Any?>?,
+        key: String,
+        defaultValue: Int
+    ): Int {
+        if (map == null) return defaultValue
+        return when (val value = getValueIgnoreCase(map, key)) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull() ?: defaultValue
             else -> defaultValue
         }
     }

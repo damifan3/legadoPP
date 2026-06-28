@@ -11,6 +11,18 @@
     android:orientation="vertical"
     android:padding="20dp">
 
+    <TextView
+        android:id="@+id/tv_custom_script_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:background="#1AFFF3E0"
+        android:padding="8dp"
+        android:text="当前书籍正在使用自定义定时任务脚本。使用此快捷面板修改配置将会覆盖您的自定义代码！"
+        android:textColor="@color/md_red_500"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
