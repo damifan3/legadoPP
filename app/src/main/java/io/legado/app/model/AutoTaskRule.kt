@@ -18,8 +18,6 @@ import java.util.UUID
  * - enable: 是否启用该任务
  * - cron: Cron 表达式，定义执行时间（如 "每30分钟" 表示定时执行）
  * - script: 要执行的 JavaScript 脚本内容
- * - autoPay: 是否自动购买新章节（新增功能）
- * - autoPayMaxCount: 单次最多购买章节数（防止误操作）
  *
  * @property id 主键，UUID 格式
  * @property name 任务名称
@@ -38,8 +36,6 @@ import java.util.UUID
  * @property lastResult 上次执行结果摘要
  * @property lastError 上次执行错误信息
  * @property lastLog 上次执行日志
- * @property autoPay 是否自动购买新章节
- * @property autoPayMaxCount 单次最多购买章节数
  */
 @Entity(tableName = "auto_task_rules")
 data class AutoTaskRule(
@@ -102,17 +98,5 @@ data class AutoTaskRule(
     var lastError: String? = null,
 
     @SerializedName("lastLog")
-    var lastLog: String? = null,
-
-    // ========== 新增字段：自动购买功能 ==========
-
-    // 是否自动购买新章节
-    @SerializedName("autoPay")
-    @ColumnInfo(defaultValue = "0")
-    var autoPay: Boolean = false,
-
-    // 单次最多购买章节数（防止误操作导致大量购买）
-    @SerializedName("autoPayMaxCount")
-    @ColumnInfo(defaultValue = "10")
-    var autoPayMaxCount: Int = 10
+    var lastLog: String? = null
 )

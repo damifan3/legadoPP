@@ -55,11 +55,7 @@ class AutoTaskViewModel(application: Application) : BaseViewModel(application) {
         @SerializedName("header")
         val header: String?,
         @SerializedName("jsLib")
-        val jsLib: String?,
-        @SerializedName("autoPay")
-        val autoPay: Boolean,
-        @SerializedName("autoPayMaxCount")
-        val autoPayMaxCount: Int
+        val jsLib: String?
     )
 
     /**
@@ -77,9 +73,7 @@ class AutoTaskViewModel(application: Application) : BaseViewModel(application) {
             comment = comment,
             script = script,
             header = header,
-            jsLib = jsLib,
-            autoPay = autoPay,
-            autoPayMaxCount = autoPayMaxCount
+            jsLib = jsLib
         )
     }
 
