@@ -332,7 +332,7 @@ object CacheBook {
             waitDownloadSet.remove(chapterIndex)
             onDownloadSet.add(chapterIndex)
             if (BookHelp.hasContent(book, chapter)) {
-                Coroutine.async(scope, context, executeContext = context) {
+                Coroutine.async(scope, context, start = CoroutineStart.LAZY, executeContext = context) {
                     BookHelp.getContent(book, chapter)?.let {
                         BookHelp.saveImages(bookSource, book, chapter, it, 1)
                     }
@@ -349,6 +349,7 @@ object CacheBook {
                     onFinally()
                 }.let {
                     tasks.add(it)
+                    it.start()
                 }
                 return
             }
