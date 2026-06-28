@@ -420,7 +420,7 @@ object DatabaseMigrations {
     class Migration_84_85 : AutoMigrationSpec
 
     /**
-     * 迁移 89 -> 90：添加定时任务规则表 (auto_task_rules)
+     * 手动迁移 89 -> 90：添加定时任务规则表 (auto_task_rules)
      *
      * 该表用于存储定时任务的配置信息，包括自动购买章节的设置。
      * 字段说明与 AutoTaskRule 实体类一一对应：
@@ -472,5 +472,17 @@ object DatabaseMigrations {
             """.trimIndent())
         }
     }
+
+    //自动迁移
+    @Suppress("ClassName")
+    @DeleteColumn(
+        tableName = "auto_task_rules",
+        columnName = "autoPay"
+    )
+    @DeleteColumn(
+        tableName = "auto_task_rules",
+        columnName = "autoPayMaxCount"
+    )
+    class Migration_90_91 : AutoMigrationSpec
 
 }
