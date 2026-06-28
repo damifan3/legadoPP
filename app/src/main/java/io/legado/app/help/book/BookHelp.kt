@@ -114,12 +114,16 @@ object BookHelp {
         // 仅处理符合缓存命名规则的文件，如 00010-a1b2c3d4e5f6g7h8.nb 或 .nr
         val prefixPattern = Regex("^[0-9]{5}-[a-fA-F0-9]{16}$")
 
-        // 建立 URL 到 旧缓存前缀 的精确映射
+        // 建立 URL 和 TitleMD5 到 旧缓存前缀 的映射，并保存前缀到旧 URL 的反查映射用于日志
         val oldUrlToPrefix = HashMap<String, String>()
+        val oldMd5ToPrefix = HashMap<String, String>()
+        val oldPrefixToUrl = HashMap<String, String>()
         for (chapter in oldToc) {
             val titleMD5 = MD5Utils.md5Encode16(chapter.title)
             val prefix = String.format("%05d-%s", chapter.index, titleMD5)
             oldUrlToPrefix[chapter.url] = prefix
+            oldMd5ToPrefix[titleMD5] = prefix
+            oldPrefixToUrl[prefix] = chapter.url
         }
 
         val renameMap = HashMap<String, String>()
@@ -128,9 +132,29 @@ object BookHelp {
             val newTitleMD5 = MD5Utils.md5Encode16(newChapter.title)
             val newPrefix = String.format("%05d-%s", newChapter.index, newTitleMD5)
 
-            val oldPrefix = oldUrlToPrefix[newChapter.url]
-            if (oldPrefix != null && oldPrefix != newPrefix) {
-                renameMap[oldPrefix] = newPrefix
+            var oldPrefix = oldUrlToPrefix[newChapter.url]
+            var matchMode = "URL匹配"
+
+            // 降级使用标题 MD5 来匹配
+            if (oldPrefix == null) {
+                oldPrefix = oldMd5ToPrefix[newTitleMD5]
+                matchMode = "MD5降级匹配"
+            }
+
+            if (oldPrefix != null) {
+                if (oldPrefix != newPrefix) {
+                    renameMap[oldPrefix] = newPrefix
+                    val oldUrl = oldPrefixToUrl[oldPrefix] ?: "未知"
+                    // 输出重命名迁移的调试日志，增加详细信息
+                    if (matchMode == "MD5降级匹配") {
+                        AppLog.put("缓存迁移(${book.name}): URL发生改变，触发[$matchMode]。\n旧前缀: $oldPrefix -> 新前缀: $newPrefix\n章节名: ${newChapter.title}\n旧URL: $oldUrl\n新URL: ${newChapter.url}")
+                    } else {
+                        AppLog.put("缓存迁移(${book.name}): URL未变，正常[$matchMode]。\n旧前缀: $oldPrefix -> 新前缀: $newPrefix\n章节名: ${newChapter.title}\n旧URL: $oldUrl\n新URL: ${newChapter.url}")
+                    }
+                }
+            } else {
+                // 没有找到可迁移的旧章节，属于纯粹的新章节
+                AppLog.put("缓存迁移(${book.name}): 发现全新章节，无旧缓存可迁移。\n章节名: ${newChapter.title}\n新URL: ${newChapter.url}\n新前缀: $newPrefix")
             }
         }
 
