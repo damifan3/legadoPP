@@ -425,10 +425,26 @@ object AutoTaskProtocol {
     private fun parseActionsFromJson(text: String): List<Map<String, Any?>>? {
         val trimmed = text.trim()
         return when {
+            //对应这种格式 JSON数组
+            // [{type:"refreshtoc", cache: {enable: true}}, {type:"refreshtoc"}]
             trimmed.isJsonArray() -> {
                 val list = GSON.fromJsonArray<Map<String, Any?>>(trimmed).getOrNull()
                 list?.mapNotNull { ensureStringKeyMap(it) }
             }
+            /*
+            对应这两种格式：
+            结构 B（返回包含多个动作的 JSON 对象）：
+            json
+            {
+              "actions": [
+                { "type": "refreshtoc", "bookUrl": "..." },
+                { "type": "notify", "content": "..." }
+              ]
+            }
+            结构 C（仅返回单一动作的 JSON 对象）：
+            json
+            { "type": "refreshtoc", "bookUrl": "..." }
+             */
             trimmed.isJsonObject() -> {
                 val map = GSON.fromJsonObject<Map<String, Any?>>(trimmed).getOrNull()
                 mapToActions(map)
@@ -443,9 +459,13 @@ object AutoTaskProtocol {
     private fun mapToActions(root: Map<String, Any?>?): List<Map<String, Any?>>? {
         if (root == null) return null
         val normalized = ensureStringKeyMap(root) ?: return null
+
+        //将 actions 字段取出
         val actionsValue = normalized["actions"]
         return when (actionsValue) {
+            //包含 actions 字段的分支
             is List<*> -> actionsValue.mapNotNull { ensureStringKeyMap(it) }
+            //不包含 actions 字段的分支，直接就是一个动作（包含 type 字段）
             else -> if (normalized.containsKey("type")) listOf(normalized) else null
         }
     }
