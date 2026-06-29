@@ -94,6 +94,8 @@ object BookHelp {
      * 自动迁移和章节缓存重命名
      * 当章节目录更新（插入、删除导致 index 偏移）时，根据新旧章节的 URL 对应关系，
      * 将旧的缓存文件精确重命名为新 index 的文件名。
+     * 第一次降级：使用旧目录 md5 匹配
+     * 第二次降级：使用本地文件MD5匹配
      */
     fun migrateTocCache(book: Book, oldToc: List<BookChapter>, newToc: List<BookChapter>) {
         if (oldToc.isEmpty() || newToc.isEmpty() || book.isLocalTxt) {
@@ -114,23 +116,78 @@ object BookHelp {
         // 仅处理符合缓存命名规则的文件，如 00010-a1b2c3d4e5f6g7h8.nb 或 .nr
         val prefixPattern = Regex("^[0-9]{5}-[a-fA-F0-9]{16}$")
 
-        // 建立 URL 到 旧缓存前缀 的精确映射
+        // 建立 本地实际缓存文件（MD5）到 旧缓存前缀 的映射（应对 oldToc 中章节丢失但缓存还在的情况）
+        val localCacheMd5ToPrefixes = HashMap<String, MutableList<String>>()
+        val prefixToLastModified = HashMap<String, Long>() // 记录每个前缀对应文件的修改时间
+        for (file in files) {
+            if (!file.isFile) continue
+            val name = file.name
+            val dotIndex = name.lastIndexOf('.')
+            if (dotIndex > 0) {
+                val prefix = name.substring(0, dotIndex)
+                if (prefix.matches(prefixPattern)) {
+                    prefixToLastModified[prefix] = file.lastModified()
+                    val fileMd5 = prefix.substring(6) // 提取出MD5部分
+                    localCacheMd5ToPrefixes.getOrPut(fileMd5) { ArrayList() }.add(prefix)
+                }
+            }
+        }
+
+        // 建立 URL 和 TitleMD5 到 旧缓存前缀 的映射
         val oldUrlToPrefix = HashMap<String, String>()
+        val oldMd5ToPrefixes = HashMap<String, MutableList<String>>()
         for (chapter in oldToc) {
             val titleMD5 = MD5Utils.md5Encode16(chapter.title)
             val prefix = String.format("%05d-%s", chapter.index, titleMD5)
             oldUrlToPrefix[chapter.url] = prefix
+            oldMd5ToPrefixes.getOrPut(titleMD5) { ArrayList() }.add(prefix)
         }
 
         val renameMap = HashMap<String, String>()
+        val usedOldPrefixes = HashSet<String>() // 记录已被匹配走的旧前缀，防止被多个新章节重复占用
 
         for (newChapter in newToc) {
             val newTitleMD5 = MD5Utils.md5Encode16(newChapter.title)
             val newPrefix = String.format("%05d-%s", newChapter.index, newTitleMD5)
 
-            val oldPrefix = oldUrlToPrefix[newChapter.url]
-            if (oldPrefix != null && oldPrefix != newPrefix) {
-                renameMap[oldPrefix] = newPrefix
+            var oldPrefix = oldUrlToPrefix[newChapter.url]
+
+            if (oldPrefix != null && usedOldPrefixes.contains(oldPrefix)) {
+                // 如果 URL 匹配到的旧前缀已经被其他章节占用（可能是网站URL重复或混乱），则放弃此匹配
+                oldPrefix = null
+            }
+
+            // 辅助函数：在同 MD5 的旧前缀列表中寻找文件时间最早且未被占用的前缀
+            val findOldestPrefix: (MutableList<String>?) -> String? = { prefixes ->
+                var bestPrefix: String? = null
+                var minTime = Long.MAX_VALUE
+                prefixes?.forEach { p ->
+                    if (!usedOldPrefixes.contains(p)) {
+                        val time = prefixToLastModified[p] ?: Long.MAX_VALUE
+                        if (time < minTime) {
+                            minTime = time
+                            bestPrefix = p
+                        }
+                    }
+                }
+                bestPrefix
+            }
+
+            // 降级使用标题 MD5 来匹配
+            if (oldPrefix == null) {
+                oldPrefix = findOldestPrefix(oldMd5ToPrefixes[newTitleMD5])
+            }
+
+            // 再次降级：直接从本地未关联的缓存文件中按 MD5 匹配
+            if (oldPrefix == null) {
+                oldPrefix = findOldestPrefix(localCacheMd5ToPrefixes[newTitleMD5])
+            }
+
+            if (oldPrefix != null) {
+                usedOldPrefixes.add(oldPrefix) // 标记为已使用
+                if (oldPrefix != newPrefix) {
+                    renameMap[oldPrefix] = newPrefix
+                }
             }
         }
 
