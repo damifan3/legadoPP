@@ -1383,7 +1383,8 @@ class BookInfoActivity :
         */
         if (assignMatch != null) {
             val assigned = assignMatch.groupValues[1].trim()
-            val first = assigned.substringBefore(";").trim()
+            //返回最后一个分号之前的内容，防止url中有分号提前返回
+            val first = assigned.substringBeforeLast(";").trim()
             val inner = unwrapJsonExpression(first) ?: first
             if (inner.startsWith("{") || inner.startsWith("[")) {
                 return inner
@@ -1423,7 +1424,8 @@ class BookInfoActivity :
         if (index < 0) return null
         val after = trimmed.substring(index + 6).trim()
         if (after.isBlank()) return null
-        return after.substringBefore(";").trim()
+        //返回最后一个分号之前的内容，防止url中有分号提前返回
+        return after.substringBeforeLast(";").trim()
     }
 
     private fun unwrapJsonExpression(text: String): String? {
