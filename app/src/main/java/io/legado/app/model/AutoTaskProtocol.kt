@@ -331,22 +331,21 @@ object AutoTaskProtocol {
         val time = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date())
 
         val defaultTitle = context.getString(R.string.auto_task_book_update_title, book.name)
-        val defaultContent = if (latestTitle.isNullOrBlank()) {
+        var defaultContent = if (latestTitle.isNullOrBlank()) {
             context.getString(R.string.auto_task_book_update_content_count, newCount)
         } else {
             context.getString(R.string.auto_task_book_update_content, newCount, latestTitle)
         }
 
-        val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
-        var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
-
-        //增加的购买信息必须放在 contentTpl ?: defaultContent 后边，不然会被用户定义模板取代。
         if (purchaseEnabled) {
-            content += "\n自动购买成功: ${purchaseCount}章"
+            defaultContent += "\n自动购买成功: {purchaseCount}章"
             if (purchaseFailCount > 0) {
-                content += "\n自动购买失败: ${purchaseFailCount}章"
+                defaultContent += "\n自动购买失败: {purchaseFailCount}章"
             }
         }
+
+        val title = formatTemplate(titleTpl ?: defaultTitle, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
+        val content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
 
         // 计算通知 ID（基于书籍 URL 哈希）
         val notifyId = NotificationId.AutoTaskBookUpdateBase +
