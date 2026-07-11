@@ -247,6 +247,7 @@ object AutoTaskProtocol {
                 latestTitle = latestTitle,
                 titleTpl = titleTpl,
                 contentTpl = contentTpl,
+                purchaseEnabled = purchaseEnabled,
                 purchaseCount = purchaseCount,
                 purchaseFailCount = purchaseFailCount
             )
@@ -323,6 +324,7 @@ object AutoTaskProtocol {
         latestTitle: String?,
         titleTpl: String?,
         contentTpl: String?,
+        purchaseEnabled: Boolean = false,
         purchaseCount: Int = 0,
         purchaseFailCount: Int = 0
     ) {
@@ -339,12 +341,12 @@ object AutoTaskProtocol {
         var content = formatTemplate(contentTpl ?: defaultContent, book, newCount, latestTitle, time, purchaseCount, purchaseFailCount)
 
         //增加的购买信息必须放在 contentTpl ?: defaultContent 后边，不然会被用户定义模板取代。
-//        if (purchaseCount > 0 ) {
-//            content += "\n自动购买成功: ${purchaseCount}章"
-//        }
-//        if (purchaseFailCount > 0 ) {
-//            content += "\n自动购买失败: ${purchaseFailCount}章"
-//        }
+        if (purchaseEnabled) {
+            content += "\n自动购买成功: ${purchaseCount}章"
+            if (purchaseFailCount > 0) {
+                content += "\n自动购买失败: ${purchaseFailCount}章"
+            }
+        }
 
         // 计算通知 ID（基于书籍 URL 哈希）
         val notifyId = NotificationId.AutoTaskBookUpdateBase +
