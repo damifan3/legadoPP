@@ -394,6 +394,20 @@
                 android:textColor="@color/primaryText"
                 android:textSize="15sp" />
 
+            <TextView
+                android:id="@+id/tv_download"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:text="@string/offline_cache"
+                android:textColor="@color/primaryText"
+                android:textSize="15sp" />
+
             <io.legado.app.ui.widget.text.AccentBgTextView
                 android:id="@+id/tv_read"
                 android:layout_width="0dp"
