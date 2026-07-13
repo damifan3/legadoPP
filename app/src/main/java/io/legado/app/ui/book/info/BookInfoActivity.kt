@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import io.legado.app.ui.widget.view.initCacheVisualizer
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import io.legado.app.R
@@ -1540,6 +1541,9 @@ class BookInfoActivity :
                     editStart.setText((book.durChapterIndex + 1).toString())
                     editEnd.setText(book.totalChapterNum.toString())
                 }
+                
+                alertBinding.initCacheVisualizer(this@BookInfoActivity, book, lifecycleScope)
+
                 customView { alertBinding.root }
                 okButton {
                     alertBinding.run {
