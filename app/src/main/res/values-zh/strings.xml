@@ -1300,4 +1300,5 @@
     <string name="auto_task_purchase_failed">自动购买失败：%1$d 章</string>
     <string name="auto_task_purchase_no_action">书源未配置购买规则</string>
     <string name="auto_task_purchase_no_unpaid">无需购买的章节</string>
+    <string name="cache_summary">已缓存: %1$d 章 / 未缓存: %2$d 章</string>
 </resources>
