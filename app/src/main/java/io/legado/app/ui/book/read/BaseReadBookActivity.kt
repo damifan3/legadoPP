@@ -10,7 +10,11 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import io.legado.app.help.book.isLocalTxt
 import androidx.core.view.WindowInsetsCompat
+import io.legado.app.ui.widget.view.initCacheVisualizer
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import io.legado.app.R
@@ -271,6 +275,9 @@ abstract class BaseReadBookActivity :
                     editStart.setText((book.durChapterIndex + 1).toString())
                     editEnd.setText(book.totalChapterNum.toString())
                 }
+
+                alertBinding.initCacheVisualizer(this@BaseReadBookActivity, book, lifecycleScope)
+
                 customView { alertBinding.root }
                 okButton {
                     alertBinding.run {
