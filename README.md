@@ -50,6 +50,8 @@
 * **书源编辑快捷导航**: 在书源编辑界面引入快捷导航功能，将其提取为可复用组件。
     > 书源编辑再也不用划到手酸了。
 
+* **UI布局微优化**: 
+    > 书籍详情页加入缓存按钮，减少操作深度；加入可视化条。
 
 # Function-主要功能 [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-主要功能-)
 [English](English.md)
