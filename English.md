@@ -49,6 +49,9 @@ New features are welcome for testing, feel free to report issues.
 * **Shortcut Navigation for Source Editing**: Introduced a shortcut navigation feature in the book source editing interface, extracting it as a reusable component.
     > No more sore thumbs scrolling up and down while editing book sources.
 
+* **UI Layout Micro-optimizations**: 
+    > Added a cache button to the book details page to reduce operation depth; added a visual progress bar.
+
 
 # Function-Main Features [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-Main-Features-)
 [中文](README.md)
