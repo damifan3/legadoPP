@@ -35,6 +35,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityBookInfoBinding
 import io.legado.app.databinding.DialogBookAutoTaskBinding
+import io.legado.app.databinding.DialogDownloadChoiceBinding
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.GlideImageGetter
@@ -65,6 +66,7 @@ import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.lib.theme.getPrimaryTextColor
 import io.legado.app.model.BookCover
+import io.legado.app.model.CacheBook
 import io.legado.app.model.remote.RemoteBookWebDav
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.audio.AudioPlayActivity
@@ -802,6 +804,9 @@ class BookInfoActivity :
                 }
             }
         }
+        tvDownload?.setOnClickListener {
+            showDownloadDialog()
+        }
         tvOrigin.setOnClickListener {
             viewModel.getBook()?.let { book ->
                 if (book.isLocal) return@let
@@ -1525,6 +1530,31 @@ class BookInfoActivity :
     private fun getValueIgnoreCase(map: Map<String, Any?>, key: String): Any? {
         map[key]?.let { return it }
         return map.entries.firstOrNull { it.key.equals(key, true) }?.value
+    }
+
+    @SuppressLint("InflateParams", "SetTextI18n")
+    private fun showDownloadDialog() {
+        viewModel.getBook()?.let { book ->
+            alert(titleResource = R.string.offline_cache) {
+                val alertBinding = DialogDownloadChoiceBinding.inflate(layoutInflater).apply {
+                    editStart.setText((book.durChapterIndex + 1).toString())
+                    editEnd.setText(book.totalChapterNum.toString())
+                }
+                customView { alertBinding.root }
+                okButton {
+                    alertBinding.run {
+                        val start = editStart.text?.toString()?.let {
+                            if (it.isEmpty()) 0 else it.toInt()
+                        } ?: 0
+                        val end = editEnd.text?.toString()?.let {
+                            if (it.isEmpty()) book.totalChapterNum else it.toInt()
+                        } ?: book.totalChapterNum
+                        CacheBook.start(this@BookInfoActivity, book, start - 1, end - 1)
+                    }
+                }
+                cancelButton()
+            }
+        }
     }
 
 }
