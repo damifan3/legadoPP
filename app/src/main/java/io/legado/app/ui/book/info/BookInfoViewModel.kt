@@ -159,6 +159,10 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                 if (book.originName != bs.bookSourceName) {
                     book.originName = bs.bookSourceName
                 }
+                //删除本地的缓存，这样才能解析到新的简介和目录
+                //book.infoHtml = null
+                //book.tocHtml = null
+                //不用删除，infoHtml 字段带有 @Ignore 注解。根本不存入数据库，每次打开详情页必然是null
             }
         }.onError {
             when (it) {
@@ -210,6 +214,7 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
                     if (it.isWebFile) {
                         loadWebFile(it)
                     } else {
+                        //加载章节
                         loadChapter(it, runPreUpdateJs, isFromBookInfo = true)
                     }
                 }.onError {

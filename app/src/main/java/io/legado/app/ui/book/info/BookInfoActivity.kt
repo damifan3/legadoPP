@@ -291,6 +291,7 @@ class BookInfoActivity :
         return super.onMenuOpened(featureId, menu)
     }
 
+    //点击右上角的菜单图标，触发此监听
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_custom_btn -> {
@@ -336,6 +337,7 @@ class BookInfoActivity :
                 }
             }
 
+            //点击右上角菜单里的“刷新”按钮
             R.id.menu_refresh -> {
                 refreshBook()
             }
@@ -470,6 +472,8 @@ class BookInfoActivity :
     private fun refreshToc() {
         upLoading(true)
         viewModel.getBook()?.let {
+            //防止之前可能存在的缓存的干扰
+            it.tocHtml = null
             viewModel.loadChapter(it, true, isFromBookInfo = true)
         }
     }
@@ -907,6 +911,7 @@ class BookInfoActivity :
             }
             true
         }
+        //监听下拉刷新事件
         refreshLayout?.setOnRefreshListener {
             refreshLayout.isRefreshing = false
             refreshBook()
