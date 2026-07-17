@@ -20,6 +20,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.CancellationException
 import okhttp3.Request
 import splitties.init.appCtx
 import java.io.File
@@ -66,23 +68,30 @@ object CacheAudio {
                 var success = false
                 while (retryCount < 3 && !success) {
                     try {
-                        val playUrl = WebBook.getContentAwait(bookSource, book, chapter, needSave = false)
-                        if (playUrl.isBlank()) throw Exception("音频直链为空")
-                        
-                        val chapterName = AudioCache.getCleanChapterName(chapter.title)
-                        val indexStr = String.format("%05d", chapter.index)
-                        
-                        if (playUrl.contains(".m3u8")) {
-                            success = downloadM3u8(book, bookSource, playUrl, "${indexStr}_$chapterName.ts")
-                        } else {
-                            // 动态嗅探拓展名，默认为 mp3
-                            val ext = if (playUrl.contains(".m4a")) ".m4a" else ".mp3"
-                            success = downloadDirect(book, bookSource, playUrl, "${indexStr}_$chapterName$ext")
+                        val result = withTimeoutOrNull(5 * 60 * 1000L) {
+                            val playUrl = WebBook.getContentAwait(bookSource, book, chapter, needSave = false)
+                            if (playUrl.isBlank()) throw Exception("音频直链为空")
+                            
+                            val chapterName = AudioCache.getCleanChapterName(chapter.title)
+                            val indexStr = String.format("%05d", chapter.index)
+                            
+                            if (playUrl.contains(".m3u8")) {
+                                downloadM3u8(book, bookSource, playUrl, "${indexStr}_$chapterName.ts")
+                            } else {
+                                // 动态嗅探拓展名，默认为 mp3
+                                val ext = if (playUrl.contains(".m4a")) ".m4a" else ".mp3"
+                                downloadDirect(book, bookSource, playUrl, "${indexStr}_$chapterName$ext")
+                            }
                         }
-                        if (!success) {
+                        if (result == null) {
+                            throw Exception("章节下载超时(5分钟)")
+                        } else if (!result) {
                             throw Exception("下载请求失败或文件不完整")
+                        } else {
+                            success = true
                         }
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         AppLog.put("有声书缓存失败: ${e.localizedMessage}", e, true)
                         retryCount++
                         delay(2000L * retryCount) // 退避重试
