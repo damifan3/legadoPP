@@ -125,23 +125,29 @@ object CacheAudio {
         
         val file = File(folder, fileName)
         val tempFile = File(folder, "$fileName.tmp")
-        val body = response.body
-        if (body == null) return false
-        val contentLength = body.contentLength()
         
-        body.byteStream().use { input ->
-            FileOutputStream(tempFile).use { output ->
-                input.copyTo(output)
+        try {
+            val body = response.body
+            if (body == null) return false
+            val contentLength = body.contentLength()
+            
+            body.byteStream().use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            
+            if (contentLength > 0 && tempFile.length() != contentLength) {
+                return false
+            }
+            if (file.exists()) file.delete()
+            tempFile.renameTo(file)
+            return true
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
             }
         }
-        
-        if (contentLength > 0 && tempFile.length() != contentLength) {
-            tempFile.delete()
-            return false
-        }
-        if (file.exists()) file.delete()
-        tempFile.renameTo(file)
-        return true
     }
 
     private suspend fun downloadM3u8(book: Book, bookSource: io.legado.app.data.entities.BookSource, url: String, fileName: String): Boolean {
@@ -159,29 +165,33 @@ object CacheAudio {
         val file = File(folder, fileName)
         val tempFile = File(folder, "$fileName.tmp")
         
-        FileOutputStream(tempFile).use { output ->
-            for (tsPath in tsUrls) {
-                // 如果是相对路径，需要拼成绝对路径
-                val tsUrl = io.legado.app.utils.NetworkUtils.getAbsoluteURL(url, tsPath)
-                val tsAnalyzeUrl = io.legado.app.model.analyzeRule.AnalyzeUrl(tsUrl, source = bookSource, ruleData = book)
-                val tsResp = tsAnalyzeUrl.getResponseAwait()
-                if (!tsResp.isSuccessful) {
-                    tempFile.delete()
-                    return false
-                }
-                val body = tsResp.body
-                if (body == null) {
-                    tempFile.delete()
-                    return false
-                }
-                body.byteStream().use { input ->
-                    input.copyTo(output)
+        try {
+            FileOutputStream(tempFile).use { output ->
+                for (tsPath in tsUrls) {
+                    // 如果是相对路径，需要拼成绝对路径
+                    val tsUrl = io.legado.app.utils.NetworkUtils.getAbsoluteURL(url, tsPath)
+                    val tsAnalyzeUrl = io.legado.app.model.analyzeRule.AnalyzeUrl(tsUrl, source = bookSource, ruleData = book)
+                    val tsResp = tsAnalyzeUrl.getResponseAwait()
+                    if (!tsResp.isSuccessful) {
+                        return false
+                    }
+                    val body = tsResp.body
+                    if (body == null) {
+                        return false
+                    }
+                    body.byteStream().use { input ->
+                        input.copyTo(output)
+                    }
                 }
             }
+            if (file.exists()) file.delete()
+            tempFile.renameTo(file)
+            return true
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
         }
-        if (file.exists()) file.delete()
-        tempFile.renameTo(file)
-        return true
     }
 
     fun removeDownload(bookUrl: String?) {
