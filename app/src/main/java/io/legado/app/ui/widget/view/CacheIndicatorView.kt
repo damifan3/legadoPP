@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import io.legado.app.R
+import io.legado.app.help.book.isAudio
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.utils.ColorUtils
 import io.legado.app.help.book.isLocalTxt
@@ -152,10 +154,24 @@ fun io.legado.app.databinding.DialogDownloadChoiceBinding.initCacheVisualizer(
             cachedCount = total
             for (i in 0 until total) cachedIndices[i] = true
         } else {
-            val cacheFileNames = io.legado.app.help.book.BookHelp.getChapterFiles(book)
+
             val chapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
+
+            val cacheFileNames = if (book.isAudio) {
+                io.legado.app.model.AudioCache.getCachedChapterNames(book)
+            } else {
+                io.legado.app.help.book.BookHelp.getChapterFiles(book)
+            }
+            
             for (chapter in chapters) {
-                if (chapter.isVolume || cacheFileNames.contains(chapter.getFileName())) {
+                val isCached = if (book.isAudio) {
+                    val audioPrefix = String.format("%05d_%s", chapter.index, io.legado.app.model.AudioCache.getCleanChapterName(chapter.title))
+                    chapter.isVolume || cacheFileNames.contains(audioPrefix)
+                } else {
+                    chapter.isVolume || cacheFileNames.contains(chapter.getFileName())
+                }
+                
+                if (isCached) {
                     if (chapter.index in 0 until total) {
                         cachedIndices[chapter.index] = true
                         cachedCount++

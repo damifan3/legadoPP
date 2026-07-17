@@ -96,7 +96,7 @@ object ExoPlayerHelper {
         //使用自定义的CacheDataSource以支持设置UA
         CacheDataSource.Factory()
             .setCache(cache)
-            .setUpstreamDataSourceFactory(okhttpDataFactory)
+            .setUpstreamDataSourceFactory(DefaultDataSource.Factory(appCtx, okhttpDataFactory))
             .setCacheReadDataSourceFactory(FileDataSource.Factory())
             .setCacheWriteDataSinkFactory(
                 CacheDataSink.Factory()

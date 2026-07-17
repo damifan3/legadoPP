@@ -11,7 +11,7 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.utils.sendValue
 import kotlinx.coroutines.ensureActive
 import kotlin.collections.set
-
+import io.legado.app.help.book.isAudio
 
 class CacheViewModel(application: Application) : BaseViewModel(application) {
     val upAdapterLiveData = MutableLiveData<String>()
@@ -25,13 +25,29 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
             books.forEach { book ->
                 if (!book.isLocal && !cacheChapters.contains(book.bookUrl)) {
                     val chapterCaches = hashSetOf<String>()
-                    val cacheNames = BookHelp.getChapterFiles(book)
-                    if (cacheNames.isNotEmpty()) {
-                        appDb.bookChapterDao.getChapterList(book.bookUrl).also {
-                            book.totalChapterNum = it.size
-                        }.forEach { chapter ->
-                            if (cacheNames.contains(chapter.getFileName()) || chapter.isVolume) {
-                                chapterCaches.add(chapter.url)
+                    if (book.isAudio) {
+                        val cachedPrefixes = io.legado.app.model.AudioCache.getCachedChapterNames(book)
+                        if (cachedPrefixes.isNotEmpty()) {
+                            appDb.bookChapterDao.getChapterList(book.bookUrl).also {
+                                book.totalChapterNum = it.size
+                            }.forEach { chapter ->
+                                val indexStr = String.format("%05d", chapter.index)
+                                val cleanName = io.legado.app.model.AudioCache.getCleanChapterName(chapter.title)
+                                val prefix = "${indexStr}_$cleanName"
+                                if (cachedPrefixes.contains(prefix)) {
+                                    chapterCaches.add(chapter.url)
+                                }
+                            }
+                        }
+                    } else {
+                        val cacheNames = BookHelp.getChapterFiles(book)
+                        if (cacheNames.isNotEmpty()) {
+                            appDb.bookChapterDao.getChapterList(book.bookUrl).also {
+                                book.totalChapterNum = it.size
+                            }.forEach { chapter ->
+                                if (cacheNames.contains(chapter.getFileName()) || chapter.isVolume) {
+                                    chapterCaches.add(chapter.url)
+                                }
                             }
                         }
                     }

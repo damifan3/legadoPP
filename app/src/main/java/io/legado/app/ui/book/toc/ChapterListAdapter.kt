@@ -12,6 +12,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.databinding.ItemChapterListBinding
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.book.isAudio
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.theme.ThemeUtils
@@ -125,9 +126,14 @@ class ChapterListAdapter(context: Context, val callback: Callback) :
     ) {
         binding.run {
             val isDur = callback.durChapterIndex() == item.index
-            val cached = callback.isLocalBook
-                    || item.isVolume
-                    || cacheFileNames.contains(item.getFileName())
+            val book = callback.book
+            
+            val cached = if (book?.isAudio == true) {
+                val audioPrefix = String.format("%05d_%s", item.index, io.legado.app.model.AudioCache.getCleanChapterName(item.title))
+                callback.isLocalBook || item.isVolume || cacheFileNames.contains(audioPrefix)
+            } else {
+                callback.isLocalBook || item.isVolume || cacheFileNames.contains(item.getFileName())
+            }
             if (payloads.isEmpty()) {
                 if (isDur) {
                     tvChapterName.setTextColor(context.accentColor)

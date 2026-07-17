@@ -19,7 +19,7 @@ package-lock.json
 .cxx
 .vscode
 .claude
-/bookSources
+/references
 /logCat
 *.log
 /.agents
