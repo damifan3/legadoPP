@@ -20,6 +20,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityAudioPlayBinding
+import io.legado.app.databinding.DialogDownloadChoiceBinding
+import io.legado.app.model.CacheAudio
+import io.legado.app.ui.widget.view.initCacheVisualizer
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
@@ -175,6 +178,9 @@ class AudioPlayActivity :
                     putExtra("sourceUrl", it.bookSourceUrl)
                 }
             }
+
+            /* 离线缓存下载按钮，弹出章节区间选择对话框 */
+            R.id.menu_download -> showAudioDownloadDialog()
 
             /* 跳过片头片尾设定按钮 */
             R.id.menu_skip_credits -> AudioPlay.book?.let {
@@ -412,6 +418,46 @@ class AudioPlayActivity :
     override fun upLoading(loading: Boolean) {
         runOnUiThread {
             binding.progressLoading.visible(loading)
+        }
+    }
+
+    /**
+     * 显示有声书离线缓存（下载）的对话框
+     * 此逻辑复用了书本详情页（BookInfoActivity）的缓存逻辑
+     * 选择区间后调用 CacheAudio.start 进行具体音频文件的下载任务
+     */
+    @SuppressLint("InflateParams", "SetTextI18n")
+    private fun showAudioDownloadDialog() {
+        AudioPlay.book?.let { book ->
+            // 弹出离线缓存的通用提示框
+            alert(titleResource = R.string.offline_cache) {
+                // 加载与详情页相同的章节区间选择布局
+                val alertBinding = DialogDownloadChoiceBinding.inflate(layoutInflater).apply {
+                    // 默认起止区间：当前播放章节 -> 最后一章
+                    editStart.setText((book.durChapterIndex + 1).toString())
+                    editEnd.setText(book.totalChapterNum.toString())
+                }
+
+                // 初始化缓存可视化控件（同书本详情页）
+                alertBinding.initCacheVisualizer(this@AudioPlayActivity, book, lifecycleScope)
+
+                customView { alertBinding.root }
+                // 用户点击确定后触发下载
+                okButton {
+                    alertBinding.run {
+                        val start = editStart.text?.toString()?.let {
+                            if (it.isEmpty()) 0 else it.toInt()
+                        } ?: 0
+                        val end = editEnd.text?.toString()?.let {
+                            if (it.isEmpty()) book.totalChapterNum else it.toInt()
+                        } ?: book.totalChapterNum
+                        
+                        // 发起音频缓存任务，这里使用针对音频定制的 CacheAudio
+                        CacheAudio.start(this@AudioPlayActivity, book, start - 1, end - 1)
+                    }
+                }
+                cancelButton()
+            }
         }
     }
 }
