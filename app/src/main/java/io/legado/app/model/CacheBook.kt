@@ -11,6 +11,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.ConcurrentException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isAudio
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.CompositeCoroutine
 import io.legado.app.help.coroutine.Coroutine
@@ -89,11 +90,15 @@ object CacheBook {
 
     fun start(context: Context, book: Book, start: Int, end: Int) {
         if (!book.isLocal) {
-            context.startService<CacheBookService> {
-                action = IntentAction.start
-                putExtra("bookUrl", book.bookUrl)
-                putExtra("start", start)
-                putExtra("end", end)
+            if (book.isAudio) {
+                CacheAudio.start(context, book, start, end)
+            } else {
+                context.startService<CacheBookService> {
+                    action = IntentAction.start
+                    putExtra("bookUrl", book.bookUrl)
+                    putExtra("start", start)
+                    putExtra("end", end)
+                }
             }
         }
     }
@@ -108,6 +113,11 @@ object CacheBook {
     fun stop(context: Context) {
         if (CacheBookService.isRun) {
             context.startService<CacheBookService> {
+                action = IntentAction.stop
+            }
+        }
+        if (io.legado.app.service.CacheAudioService.isRun) {
+            context.startService<io.legado.app.service.CacheAudioService> {
                 action = IntentAction.stop
             }
         }
@@ -161,6 +171,7 @@ object CacheBook {
 
     val isRun: Boolean
         get() {
+            if (io.legado.app.service.CacheAudioService.isRun) return true
             cacheBookMap.forEach {
                 if (it.value.isRun()) {
                     return true

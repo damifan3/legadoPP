@@ -186,7 +186,17 @@ object AudioPlay : CoroutineScope by MainScope() {
                     return
                 }
                 upLoading(true)
-                WebBook.getContent(this, bookSource, book, chapter)
+                
+                // 离线缓存拦截
+                val cachedFile = io.legado.app.model.AudioCache.getCachedFile(book, chapter)
+                if (cachedFile != null) {
+                    contentLoadFinish(chapter, android.net.Uri.fromFile(cachedFile).toString())
+                    upLoading(false)
+                    removeLoading(index)
+                    return
+                }
+
+                WebBook.getContent(this, bookSource, book, chapter, needSave = false)
                     .onSuccess { content ->
                         val content = content.trim()
                         if (content.isEmpty()) {
