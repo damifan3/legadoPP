@@ -403,6 +403,29 @@ class AudioPlayService : BaseService(),
      */
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
+        
+        // 容错兜底机制：如果是播放本地缓存文件报错，可能是文件损坏，自动删除并回退到网络流播
+        if (AudioPlay.durPlayUrl.startsWith("file://")) {
+            val path = android.net.Uri.parse(AudioPlay.durPlayUrl).path
+            if (path != null) {
+                val file = java.io.File(path)
+                if (file.exists()) {
+                    file.delete()
+                    AudioPlay.book?.let { book ->
+                        AudioPlay.durChapter?.let { chapter ->
+                            // TODO: 若需要实时刷新 UI 取消对勾，需要增加专属的 DEL_CONTENT 事件，
+                            // 目前为了防止与 SAVE_CONTENT（只增不减）冲突，暂时不发事件，
+                            // 重新进入缓存界面时会自动重新扫盘刷新状态。
+                        }
+                    }
+                    AppLog.put("本地音频缓存损坏，已自动删除并尝试通过网络重播")
+                    AudioPlay.durPlayUrl = "" // 清空本地地址
+                    AudioPlay.loadOrUpPlayUrl() // 重新获取网络地址并播放
+                    return
+                }
+            }
+        }
+
         AudioPlay.status = Status.STOP
         postEvent(EventBus.AUDIO_STATE, Status.STOP)
         AudioPlay.upLoading(false)

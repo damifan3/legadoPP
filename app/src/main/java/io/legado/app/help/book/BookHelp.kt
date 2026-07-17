@@ -54,8 +54,11 @@ import kotlin.math.min
 
 @Suppress("unused", "ConstPropertyName")
 object BookHelp {
-    private val downloadDir: File = appCtx.externalFiles
+    private val downloadDir: File
+        get() = appCtx.externalFiles
     private const val cacheFolderName = "book_cache"
+    val Book.cacheFolderName: String
+        get() = if (this.isAudio) io.legado.app.model.AudioCache.cacheFolderName else BookHelp.cacheFolderName
     private const val cacheImageFolderName = "images"
     private const val cacheEpubFolderName = "epub"
     private val downloadImages = ConcurrentHashMap<String, Mutex>()
@@ -69,7 +72,7 @@ object BookHelp {
     }
 
     fun clearCache(book: Book) {
-        val filePath = FileUtils.getPath(downloadDir, cacheFolderName, book.getFolderName())
+        val filePath = FileUtils.getPath(downloadDir, book.cacheFolderName, book.getFolderName())
         FileUtils.delete(filePath)
     }
 
@@ -79,12 +82,12 @@ object BookHelp {
         if (oldFolderName == newFolderName) return
         val oldFolderPath = FileUtils.getPath(
             downloadDir,
-            cacheFolderName,
+            oldBook.cacheFolderName,
             oldFolderName
         )
         val newFolderPath = FileUtils.getPath(
             downloadDir,
-            cacheFolderName,
+            newBook.cacheFolderName,
             newFolderName
         )
         FileUtils.move(oldFolderPath, newFolderPath)
@@ -102,7 +105,7 @@ object BookHelp {
             return
         }
 
-        val cacheFolder = FileUtils.getPath(downloadDir, cacheFolderName, book.getFolderName())
+        val cacheFolder = FileUtils.getPath(downloadDir, book.cacheFolderName, book.getFolderName())
         val cacheDir = File(cacheFolder)
 
         if (!cacheDir.exists()) {
@@ -243,12 +246,14 @@ object BookHelp {
                 bookFolderNames.add(it.getFolderName())
                 if (it.isEpub) originNames.add(it.originName)
             }
-            downloadDir.getFile(cacheFolderName)
-                .listFiles()?.forEach { bookFile ->
-                    if (!bookFolderNames.contains(bookFile.name)) {
-                        FileUtils.delete(bookFile.absolutePath)
+            arrayOf(cacheFolderName, io.legado.app.model.AudioCache.cacheFolderName).forEach { folder ->
+                downloadDir.getFile(folder)
+                    .listFiles()?.forEach { bookFile ->
+                        if (!bookFolderNames.contains(bookFile.name)) {
+                            FileUtils.delete(bookFile.absolutePath)
+                        }
                     }
-                }
+            }
             downloadDir.getFile(cacheEpubFolderName)
                 .listFiles()?.forEach { epubFile ->
                     if (!originNames.contains(epubFile.name)) {
@@ -288,7 +293,7 @@ object BookHelp {
             }
         }
         downloadDir.getFile(
-            cacheFolderName,
+            book.cacheFolderName,
             book.getFolderName(),
             cacheImageFolderName
         ).listFiles()?.forEach { imgFile ->
@@ -323,7 +328,7 @@ object BookHelp {
         //保存文本
         FileUtils.createFileIfNotExist(
             downloadDir,
-            cacheFolderName,
+            book.cacheFolderName,
             book.getFolderName(),
             bookChapter.getFileName(),
         ).writeText(content)
@@ -404,7 +409,7 @@ object BookHelp {
 
     fun getImage(book: Book, src: String): File {
         return downloadDir.getFile(
-            cacheFolderName,
+            book.cacheFolderName,
             book.getFolderName(),
             cacheImageFolderName,
             "${MD5Utils.md5Encode16(src)}.${getImageSuffix(src)}"
@@ -469,7 +474,7 @@ object BookHelp {
         }
         FileUtils.createFolderIfNotExist(
             downloadDir,
-            subDirs = arrayOf(cacheFolderName, book.getFolderName())
+            subDirs = arrayOf(book.cacheFolderName, book.getFolderName())
         ).list()?.let {
             fileNames.addAll(it)
         }
@@ -480,16 +485,21 @@ object BookHelp {
      * 检测该章节是否下载
      */
     fun hasContent(book: Book, bookChapter: BookChapter): Boolean {
-        return if (book.isLocalTxt ||
-            (bookChapter.isVolume && bookChapter.url.startsWith(bookChapter.title))
-        ) {
-            true
-        } else {
-            downloadDir.exists(
-                cacheFolderName,
-                book.getFolderName(),
-                bookChapter.getFileName()
-            )
+        if (book.isAudio) {
+            return io.legado.app.model.AudioCache.isCached(book, bookChapter)
+        }
+        else{
+            return if (book.isLocalTxt ||
+                (bookChapter.isVolume && bookChapter.url.startsWith(bookChapter.title))
+            ) {
+                true
+            } else {
+                downloadDir.exists(
+                    cacheFolderName,
+                    book.getFolderName(),
+                    bookChapter.getFileName()
+                )
+            }
         }
     }
 
@@ -540,7 +550,7 @@ object BookHelp {
      */
     fun getContent(book: Book, bookChapter: BookChapter): String? {
         val file = downloadDir.getFile(
-            cacheFolderName,
+            book.cacheFolderName,
             book.getFolderName(),
             bookChapter.getFileName()
         )
@@ -567,7 +577,7 @@ object BookHelp {
     fun delContent(book: Book, bookChapter: BookChapter) {
         FileUtils.createFileIfNotExist(
             downloadDir,
-            cacheFolderName,
+            book.cacheFolderName,
             book.getFolderName(),
             bookChapter.getFileName()
         ).delete()
@@ -582,7 +592,7 @@ object BookHelp {
         if (removeSameTitle) {
             val path = FileUtils.getPath(
                 downloadDir,
-                cacheFolderName,
+                book.cacheFolderName,
                 book.getFolderName(),
                 fileName
             )
@@ -591,7 +601,7 @@ object BookHelp {
         } else {
             FileUtils.createFileIfNotExist(
                 downloadDir,
-                cacheFolderName,
+                book.cacheFolderName,
                 book.getFolderName(),
                 fileName
             )
@@ -605,7 +615,7 @@ object BookHelp {
     fun removeSameTitle(book: Book, bookChapter: BookChapter): Boolean {
         val path = FileUtils.getPath(
             downloadDir,
-            cacheFolderName,
+            book.cacheFolderName,
             book.getFolderName(),
             bookChapter.getFileName("nr")
         )

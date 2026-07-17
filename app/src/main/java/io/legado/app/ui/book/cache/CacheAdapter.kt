@@ -11,7 +11,9 @@ import io.legado.app.base.adapter.DiffRecyclerAdapter
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemDownloadBinding
+import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
+import io.legado.app.model.CacheAudio
 import io.legado.app.model.CacheBook
 import io.legado.app.utils.gone
 import io.legado.app.utils.visible
@@ -75,18 +77,27 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
         }
     }
 
+    //右侧开始结束按钮点击监听器
     override fun registerListener(holder: ItemViewHolder, binding: ItemDownloadBinding) {
         binding.run {
             ivDownload.setOnClickListener {
                 getItem(holder.layoutPosition)?.let { book ->
-                    CacheBook.cacheBookMap[book.bookUrl]?.let {
-                        if (!it.isStop()) {
-                            CacheBook.remove(context, book.bookUrl)
+                    if (book.isAudio) {
+                        if (CacheAudio.isDownloading(book.bookUrl)) {
+                            CacheAudio.removeDownload(book.bookUrl)
                         } else {
+                            CacheAudio.start(context, book, 0, book.lastChapterIndex)
+                        }
+                    } else {
+                        CacheBook.cacheBookMap[book.bookUrl]?.let {
+                            if (!it.isStop()) {
+                                CacheBook.remove(context, book.bookUrl)
+                            } else {
+                                CacheBook.start(context, book, 0, book.lastChapterIndex)
+                            }
+                        } ?: let {
                             CacheBook.start(context, book, 0, book.lastChapterIndex)
                         }
-                    } ?: let {
-                        CacheBook.start(context, book, 0, book.lastChapterIndex)
                     }
                 }
             }
@@ -101,14 +112,22 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
             iv.gone()
         } else {
             iv.visible()
-            CacheBook.cacheBookMap[book.bookUrl]?.let {
-                if (!it.isStop()) {
+            if (book.isAudio) {
+                if (CacheAudio.isDownloading(book.bookUrl)) {
                     iv.setImageResource(R.drawable.ic_stop_black_24dp)
                 } else {
                     iv.setImageResource(R.drawable.ic_play_24dp)
                 }
-            } ?: let {
-                iv.setImageResource(R.drawable.ic_play_24dp)
+            } else {
+                CacheBook.cacheBookMap[book.bookUrl]?.let {
+                    if (!it.isStop()) {
+                        iv.setImageResource(R.drawable.ic_stop_black_24dp)
+                    } else {
+                        iv.setImageResource(R.drawable.ic_play_24dp)
+                    }
+                } ?: let {
+                    iv.setImageResource(R.drawable.ic_play_24dp)
+                }
             }
         }
     }

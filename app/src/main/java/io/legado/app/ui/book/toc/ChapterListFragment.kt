@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import io.legado.app.help.book.isAudio
 
 class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapter_list),
     ChapterListAdapter.Callback,
@@ -92,7 +93,11 @@ class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapt
 
     private fun initCacheFileNames(book: Book) {
         lifecycleScope.launch(IO) {
-            adapter.cacheFileNames.addAll(BookHelp.getChapterFiles(book))
+            if (book.isAudio) {
+                adapter.cacheFileNames.addAll(io.legado.app.model.AudioCache.getCachedChapterNames(book))
+            } else {
+                adapter.cacheFileNames.addAll(BookHelp.getChapterFiles(book))
+            }
             withContext(Main) {
                 adapter.notifyItemRangeChanged(0, adapter.itemCount, true)
             }
@@ -103,7 +108,11 @@ class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapt
         observeEvent<Pair<Book, BookChapter>>(EventBus.SAVE_CONTENT) { (book, chapter) ->
             viewModel.bookData.value?.bookUrl?.let { bookUrl ->
                 if (book.bookUrl == bookUrl) {
-                    adapter.cacheFileNames.add(chapter.getFileName())
+                    if (book.isAudio) {
+                        adapter.cacheFileNames.add(String.format("%05d_%s", chapter.index, io.legado.app.model.AudioCache.getCleanChapterName(chapter.title)))
+                    } else {
+                        adapter.cacheFileNames.add(chapter.getFileName())
+                    }
                     if (viewModel.searchKey.isNullOrEmpty()) {
                         adapter.notifyItemChanged(chapter.index, true)
                     } else {
