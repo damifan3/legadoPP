@@ -117,10 +117,25 @@ object BookHelp {
         }
 
         // 仅处理符合缓存命名规则的文件，如 00010-a1b2c3d4e5f6g7h8.nb 或 .nr
-        val prefixPattern = Regex("^[0-9]{5}-[a-fA-F0-9]{16}$")
+        val isAudio = book.isAudio
+        val prefixPattern = if (isAudio) Regex("^[0-9]{5}_.*$") else Regex("^[0-9]{5}-[a-fA-F0-9]{16}$")
 
-        // 建立 本地实际缓存文件（MD5）到 旧缓存前缀 的映射（应对 oldToc 中章节丢失但缓存还在的情况）
-        val localCacheMd5ToPrefixes = HashMap<String, MutableList<String>>()
+        // md5或者有声书章节名
+        val getIdentifier: (String) -> String = if (isAudio) {
+            { title -> io.legado.app.model.AudioCache.getCleanChapterName(title) }
+        } else {
+            { title -> MD5Utils.md5Encode16(title) }
+        }
+
+        // 文件名 prefix 格式
+        val formatPrefix: (Int, String) -> String = if (isAudio) {
+            { index, identifier -> String.format("%05d_%s", index, identifier) }
+        } else {
+            { index, identifier -> String.format("%05d-%s", index, identifier) }
+        }
+
+        // 建立 本地实际缓存文件（MD5/CleanTitle）到 旧缓存前缀 的映射（应对 oldToc 中章节丢失但缓存还在的情况）
+        val localCacheIdentifierToPrefixes = HashMap<String, MutableList<String>>()
         val prefixToLastModified = HashMap<String, Long>() // 记录每个前缀对应文件的修改时间
         for (file in files) {
             if (!file.isFile) continue
@@ -130,22 +145,22 @@ object BookHelp {
                 val prefix = name.substring(0, dotIndex)
                 if (prefix.matches(prefixPattern)) {
                     prefixToLastModified[prefix] = file.lastModified()
-                    val fileMd5 = prefix.substring(6) // 提取出MD5部分
-                    localCacheMd5ToPrefixes.getOrPut(fileMd5) { ArrayList() }.add(prefix)
+                    val identifier = prefix.substring(6) // 提取出特征部分(MD5或标题)
+                    localCacheIdentifierToPrefixes.getOrPut(identifier) { ArrayList() }.add(prefix)
                 }
             }
         }
 
-        // 建立 URL 和 TitleMD5 到 旧缓存前缀 的映射
+        // 建立 URL 和 Identifier 到 旧缓存前缀 的映射
         val oldUrlToPrefix = HashMap<String, String>()
-        val oldMd5ToPrefixes = HashMap<String, MutableList<String>>()
+        val oldIdentifierToPrefixes = HashMap<String, MutableList<String>>()
         val oldPrefixToUrl = HashMap<String, String>()
         val oldPrefixToTitle = HashMap<String, String>()
         for (chapter in oldToc) {
-            val titleMD5 = MD5Utils.md5Encode16(chapter.title)
-            val prefix = String.format("%05d-%s", chapter.index, titleMD5)
+            val identifier = getIdentifier(chapter.title)
+            val prefix = formatPrefix(chapter.index, identifier)
             oldUrlToPrefix[chapter.url] = prefix
-            oldMd5ToPrefixes.getOrPut(titleMD5) { ArrayList() }.add(prefix)
+            oldIdentifierToPrefixes.getOrPut(identifier) { ArrayList() }.add(prefix)
             oldPrefixToUrl[prefix] = chapter.url
             oldPrefixToTitle[prefix] = chapter.title
         }
@@ -154,9 +169,10 @@ object BookHelp {
         val usedOldPrefixes = HashSet<String>() // 记录已被匹配走的旧前缀，防止被多个新章节重复占用
 
         for (newChapter in newToc) {
-            val newTitleMD5 = MD5Utils.md5Encode16(newChapter.title)
-            val newPrefix = String.format("%05d-%s", newChapter.index, newTitleMD5)
+            val newIdentifier = getIdentifier(newChapter.title)
+            val newPrefix = formatPrefix(newChapter.index, newIdentifier)
 
+            //先进行url匹配
             var matchMode = "URL匹配"
             var oldPrefix = oldUrlToPrefix[newChapter.url]
 
@@ -165,7 +181,7 @@ object BookHelp {
                 oldPrefix = null
             }
 
-            // 辅助函数：在同 MD5 的旧前缀列表中寻找文件时间最早且未被占用的前缀
+            // 辅助函数：在同 Identifier 的旧前缀列表中寻找文件时间最早且未被占用的前缀
             val findOldestPrefix: (MutableList<String>?) -> String? = { prefixes ->
                 var bestPrefix: String? = null
                 var minTime = Long.MAX_VALUE
@@ -181,16 +197,16 @@ object BookHelp {
                 bestPrefix
             }
 
-            // 降级使用标题 MD5 来匹配
+            // 降级使用标题 Identifier 来匹配（url变了标题没变）
             if (oldPrefix == null) {
-                oldPrefix = findOldestPrefix(oldMd5ToPrefixes[newTitleMD5])
-                if (oldPrefix != null) matchMode = "旧目录MD5降级匹配"
+                oldPrefix = findOldestPrefix(oldIdentifierToPrefixes[newIdentifier])
+                if (oldPrefix != null) matchMode = "旧目录特征降级匹配"
             }
 
-            // 再次降级：直接从本地未关联的缓存文件中按 MD5 匹配
+            // 再次降级：直接从本地未关联的缓存文件中按 Identifier 匹配（没有旧目录了，直接从文件中匹配）
             if (oldPrefix == null) {
-                oldPrefix = findOldestPrefix(localCacheMd5ToPrefixes[newTitleMD5])
-                if (oldPrefix != null) matchMode = "本地文件MD5降级匹配"
+                oldPrefix = findOldestPrefix(localCacheIdentifierToPrefixes[newIdentifier])
+                if (oldPrefix != null) matchMode = "本地文件特征降级匹配"
             }
 
             if (oldPrefix != null) {
