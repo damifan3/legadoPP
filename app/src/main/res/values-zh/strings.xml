@@ -812,6 +812,7 @@
     <string name="import_file_name">导入文件名</string>
     <string name="copy_book_url">拷贝书籍 URL</string>
     <string name="copy_toc_url">拷贝目录 URL</string>
+    <string name="copy_chapter_url">拷贝章节 URL</string>
     <string name="no_book">没有书籍</string>
     <string name="keep_original_name">保留原名</string>
     <string name="click_regional_config">点击区域设置</string>
