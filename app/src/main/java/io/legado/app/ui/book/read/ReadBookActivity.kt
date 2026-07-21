@@ -123,6 +123,8 @@ import io.legado.app.utils.launch
 import io.legado.app.utils.navigationBarGravity
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.observeEventSticky
+import io.legado.app.utils.runOnUI
+import io.legado.app.utils.sendToClip
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
@@ -630,6 +632,25 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
 
             R.id.menu_effective_replaces -> showDialogFragment<EffectiveReplacesDialog>()
+
+            R.id.menu_copy_chapter_url -> {
+                val book = ReadBook.book
+                val chapter = ReadBook.curTextChapter?.chapter
+                if (book != null && chapter != null) {
+                    SourceCallBack.callBackBtn(
+                        this,
+                        SourceCallBack.CLICK_COPY_CHAPTER_URL,
+                        ReadBook.bookSource,
+                        book,
+                        chapter,
+                        result = chapter.url
+                    ) {
+                        sendToClip(chapter.url)
+                    }
+                } else {
+                    toastOnUi("获取章节链接失败")
+                }
+            }
 
             R.id.menu_help -> showHelp()
         }
