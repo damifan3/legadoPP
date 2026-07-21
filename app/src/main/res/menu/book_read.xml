@@ -55,6 +55,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_copy_chapter_url"
+        android:title="@string/copy_chapter_url"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_page_anim"
         android:title="@string/book_page_anim"
         app:showAsAction="never" />

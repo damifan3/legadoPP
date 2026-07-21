@@ -910,6 +910,7 @@
     <string name="background_image_hint">Disabled when 0, enable range from 1 to 25\nThe greater the radius, the stronger the effect of blurring</string>
     <string name="copy_book_url">Copy book URL</string>
     <string name="copy_toc_url">Copy chapters URL</string>
+    <string name="copy_chapter_url">Copy chapter URL</string>
     <string name="export_folder">Export folder</string>
     <string name="export_charset">Exported text coding</string>
     <string name="export_to_web_dav">Export to WebDav</string>

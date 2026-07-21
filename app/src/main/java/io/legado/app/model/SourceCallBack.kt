@@ -30,6 +30,7 @@ object SourceCallBack {
     const val CLICK_CLEAR_CACHE = "clickClearCache"
     const val CLICK_COPY_BOOK_URL = "clickCopyBookUrl"
     const val CLICK_COPY_TOC_URL = "clickCopyTocUrl"
+    const val CLICK_COPY_CHAPTER_URL = "clickCopyChapterUrl"
     const val CLICK_COPY_PLAY_URL = "clickCopyPlayUrl"
     const val CLICK_BOOK_LABEL = "clickBookLabel"
     const val LONG_CLICK_BOOK_LABEL = "longClickBookLabel"
