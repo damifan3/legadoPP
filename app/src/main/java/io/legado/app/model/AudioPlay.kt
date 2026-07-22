@@ -15,6 +15,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReadRecord
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getBookSource
+import io.legado.app.help.book.isLocalAudio
 import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.update
@@ -57,6 +58,7 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     var playMode = PlayMode.LIST_END_STOP
     var status = Status.STOP
+    private var playJob: io.legado.app.help.coroutine.Coroutine<*>? = null
     private var activityContext: Context? = null
     private var serviceContext: Context? = null
     private val context: Context get() = activityContext ?: serviceContext ?: appCtx
@@ -172,6 +174,30 @@ object AudioPlay : CoroutineScope by MainScope() {
         val index = durChapterIndex
         if (addLoading(index)) {
             val book = book
+            
+            if (book != null && book.isLocalAudio) {
+                upDurChapter()
+                val chapter = durChapter
+                if (chapter == null) {
+                    removeLoading(index)
+                    return
+                }
+                //跳过不能播放的卷几
+                if (chapter.isVolume) {
+                    skipTo(index + 1)
+                    removeLoading(index)
+                    return
+                }
+                upLoading(true)
+
+                //chapter 的 url 就是文件路径，
+                // 详见 io.legado.app.model.localBook.AudioFile.getChapterList
+                contentLoadFinish(chapter, chapter.url)
+                upLoading(false)
+                removeLoading(index)
+                return
+            }
+
             val bookSource = bookSource
             if (book != null && bookSource != null) {
                 upDurChapter()
@@ -264,6 +290,23 @@ object AudioPlay : CoroutineScope by MainScope() {
         val book = book ?: return
         durChapter = appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)
         durAudioSize = durChapter?.end?.toInt() ?: 0
+        // 提前获取本地音频时长，使得在未点击播放前即可拖动进度条
+        if (durAudioSize <= 0 && book.isLocalAudio) {
+            durChapter?.let { chapter ->
+                try {
+                    val mmr = android.media.MediaMetadataRetriever()
+                    mmr.setDataSource(appCtx, android.net.Uri.parse(chapter.url))
+                    val durationStr = mmr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    if (durationStr != null) {
+                        durAudioSize = durationStr.toLong().toInt()
+                        AppLog.put("获取本地音频时长成功\n${durAudioSize}")
+                    }
+                    mmr.release()
+                } catch (e: Exception) {
+                    AppLog.put("获取本地音频时长失败\n${e.localizedMessage}", e)
+                }
+            }
+        }
         val title = durChapter?.title ?: appCtx.getString(R.string.data_loading)
         postEvent(EventBus.AUDIO_SUB_TITLE, title)
         postEvent(EventBus.AUDIO_SIZE, durAudioSize)
@@ -320,13 +363,14 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun skipTo(index: Int) {
-        Coroutine.async {
+        if (index in 0..<simulatedChapterSize) {
+            playJob?.cancel()
             stopPlay()
-            if (index in 0..<simulatedChapterSize) {
-                durChapterIndex = index
-                durChapterPos = 0
-                durPlayUrl = ""
-                durLyric = null
+            durChapterIndex = index
+            durChapterPos = 0
+            durPlayUrl = ""
+            durLyric = null
+            playJob = Coroutine.async {
                 saveRead()
                 loadPlayUrl()
             }
@@ -334,13 +378,14 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun prev() {
-        Coroutine.async {
+        if (durChapterIndex > 0) {
+            playJob?.cancel()
             stopPlay()
-            if (durChapterIndex > 0) {
-                durChapterIndex -= 1
-                durChapterPos = 0
-                durPlayUrl = ""
-                durLyric = null
+            durChapterIndex -= 1
+            durChapterPos = 0
+            durPlayUrl = ""
+            durLyric = null
+            playJob = Coroutine.async {
                 saveRead()
                 loadPlayUrl()
             }
@@ -348,44 +393,62 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun next() {
-        stopPlay()
         upReadTime()
         when (playMode) {
             PlayMode.LIST_END_STOP -> {
                 if (durChapterIndex + 1 < simulatedChapterSize) {
+                    playJob?.cancel()
+                    stopPlay()
                     durChapterIndex += 1
                     durChapterPos = 0
                     durPlayUrl = ""
                     durLyric = null
+                    playJob = Coroutine.async {
+                        saveRead()
+                        loadPlayUrl()
+                    }
+                } else {
+                    stopPlay()
+                    stop()
+                }
+            }
+
+            PlayMode.SINGLE_LOOP -> {
+                playJob?.cancel()
+                stopPlay()
+                durChapterPos = 0
+                durPlayUrl = ""
+                durLyric = null
+                playJob = Coroutine.async {
                     saveRead()
                     loadPlayUrl()
                 }
             }
 
-            PlayMode.SINGLE_LOOP -> {
-                durChapterPos = 0
-                durPlayUrl = ""
-                durLyric = null
-                saveRead()
-                loadPlayUrl()
-            }
-
             PlayMode.RANDOM -> {
+                playJob?.cancel()
+                stopPlay()
                 durChapterIndex = (0 until simulatedChapterSize).random()
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
-                saveRead()
-                loadPlayUrl()
+                playJob = Coroutine.async {
+                    saveRead()
+                    loadPlayUrl()
+                }
             }
 
             PlayMode.LIST_LOOP -> {
+                playJob?.cancel()
+                stopPlay()
                 durChapterIndex = (durChapterIndex + 1) % simulatedChapterSize
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
-                saveRead()
-                loadPlayUrl()
+                playJob = Coroutine.async {
+                    saveRead()
+                    loadPlayUrl()
+                }
             }
         }
     }

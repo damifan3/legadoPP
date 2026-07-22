@@ -43,6 +43,8 @@ object AppPattern {
     val bookFileRegex = Regex(".*\\.(txt|epub|umd|pdf|mobi|azw3|azw)", RegexOption.IGNORE_CASE)
     //压缩文件支持类型
     val archiveFileRegex = Regex(".*\\.(zip|rar|7z)$", RegexOption.IGNORE_CASE)
+    //本地音频文件支持类型
+    val audioFileRegex = Regex(".*\\.(mp3|m4a|flac|wav|aac|ogg|wma)$", RegexOption.IGNORE_CASE)
 
     /**
      * 所有标点
