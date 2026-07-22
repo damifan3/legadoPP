@@ -28,6 +28,7 @@ import io.legado.app.help.book.getRemoteUrl
 import io.legado.app.help.book.isArchive
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isMobi
+import io.legado.app.help.book.isLocalAudio
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isUmd
 import io.legado.app.help.book.removeLocalUriCache
@@ -119,6 +120,10 @@ object LocalBook {
     @Throws(TocEmptyException::class)
     fun getChapterList(book: Book): ArrayList<BookChapter> {
         val chapters = when {
+            book.isLocalAudio -> {
+                AudioFile.getChapterList(book)
+            }
+
             book.isEpub -> {
                 EpubFile.getChapterList(book)
             }
@@ -249,8 +254,10 @@ object LocalBook {
         var book = appDb.bookDao.getBook(bookUrl)
         if (book == null) {
             val nameAuthor = analyzeNameAuthor(fileName)
+            val isAudio = fileName.matches(AppPattern.audioFileRegex)
+            val bookType = if (isAudio) BookType.audio or BookType.local else BookType.text or BookType.local
             book = Book(
-                type = BookType.text or BookType.local,
+                type = bookType,
                 bookUrl = bookUrl,
                 name = nameAuthor.first,
                 author = nameAuthor.second,
@@ -266,6 +273,41 @@ object LocalBook {
             // 触发 isLocalModified
             book.latestChapterTime = 0
             //已有书籍说明是更新,删除原有目录
+            appDb.bookChapterDao.delByBook(bookUrl)
+        }
+        return book
+    }
+
+    /**
+     * 将目录作为有声书导入
+     */
+    fun importFolderAsAudioBook(uri: Uri): Book {
+        val fileDoc = FileDoc.fromUri(uri, true)
+        val folderName = fileDoc.name
+        val updateTime = fileDoc.lastModified
+        val bookUrl = fileDoc.toString()
+        var book = appDb.bookDao.getBook(bookUrl)
+        if (book == null) {
+            book = Book(
+                type = BookType.audio or BookType.local,
+                bookUrl = bookUrl,
+                name = folderName,
+                author = "",
+                originName = folderName,
+                latestChapterTime = updateTime,
+                order = appDb.bookDao.minOrder - 1
+            )
+            appDb.bookDao.insert(book)
+        } else {
+            /*
+            只删附属文件和旧目录，保留书籍主体记录不重新插入
+            用户下次从书架点开这本书时，底层服务发现该书没有目录（或已经脏了），
+            就会自动触发重新解析文件夹生成最新目录的流程
+             */
+            deleteBook(book, false)
+            //“失效/脏”的标记。
+            book.latestChapterTime = 0
+            //删除旧的目录列表
             appDb.bookChapterDao.delByBook(bookUrl)
         }
         return book
@@ -384,10 +426,15 @@ object LocalBook {
         return Pair(name, author)
     }
 
+    /*
+    不删除书籍实体，只删除缓存和封面
+     */
     fun deleteBook(book: Book, deleteOriginal: Boolean) {
         kotlin.runCatching {
+            //清除缓存
             BookHelp.clearCache(book)
             if (!book.coverUrl.isNullOrEmpty()) {
+                //清除封面
                 FileUtils.delete(book.coverUrl!!)
             }
             if (deleteOriginal) {
