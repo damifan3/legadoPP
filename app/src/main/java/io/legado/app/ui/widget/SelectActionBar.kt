@@ -39,6 +39,8 @@ class SelectActionBar @JvmOverloads constructor(
     private val binding = ViewSelectActionBarBinding
         .inflate(LayoutInflater.from(context), this, true)
 
+    var mainActionAlwaysEnabled = false
+
     init {
         if (!isInEditMode) {
             val transparentNavBar = context.transparentNavBar
@@ -113,8 +115,10 @@ class SelectActionBar @JvmOverloads constructor(
     private fun setMenuClickable(isClickable: Boolean) = binding.run {
         btnRevertSelection.isEnabled = isClickable
         btnRevertSelection.isClickable = isClickable
-        btnSelectActionMain.isEnabled = isClickable
-        btnSelectActionMain.isClickable = isClickable
+        
+        val mainActionClickable = isClickable || mainActionAlwaysEnabled
+        btnSelectActionMain.isEnabled = mainActionClickable
+        btnSelectActionMain.isClickable = mainActionClickable
         if (isClickable) {
             ivMenuMore.setColorFilter(primaryTextColor, PorterDuff.Mode.SRC_IN)
         } else {

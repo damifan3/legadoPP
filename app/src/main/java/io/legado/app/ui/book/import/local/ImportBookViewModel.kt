@@ -5,6 +5,7 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern.archiveFileRegex
 import io.legado.app.constant.AppPattern.bookFileRegex
+import io.legado.app.constant.AppPattern.audioFileRegex
 import io.legado.app.constant.PreferKey
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.AlphanumComparator
@@ -106,6 +107,19 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         }
     }
 
+    fun importFolderAsAudioBook(fileDoc: FileDoc, finally: () -> Unit) {
+        execute {
+            LocalBook.importFolderAsAudioBook(fileDoc.uri)
+        }.onError {
+            context.toastOnUi("添加有声书失败: ${it.localizedMessage}")
+            AppLog.put("添加有声书失败\n${it.localizedMessage}", it)
+        }.onSuccess {
+            context.toastOnUi("已将文件夹导入为有声书")
+        }.onFinally {
+            finally.invoke()
+        }
+    }
+
     fun deleteDoc(bookList: HashSet<ImportBook>, finally: () -> Unit) {
         execute {
             bookList.forEach {
@@ -122,7 +136,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 when {
                     item.name.startsWith(".") -> false
                     item.isDir -> true
-                    else -> item.name.matches(bookFileRegex) || item.name.matches(archiveFileRegex)
+                    else -> item.name.matches(bookFileRegex) || item.name.matches(archiveFileRegex) || item.name.matches(audioFileRegex)
                 }
             }
             dataCallback?.setItems(docList!!)
@@ -149,6 +163,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                         channel.trySend(it)
                     } else if (it.name.matches(bookFileRegex)
                         || it.name.matches(archiveFileRegex)
+                        || it.name.matches(audioFileRegex)
                     ) {
                         list.add(it)
                     }

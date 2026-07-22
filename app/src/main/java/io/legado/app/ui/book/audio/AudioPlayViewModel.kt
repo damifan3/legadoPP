@@ -16,6 +16,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
+import io.legado.app.help.book.isLocalAudio
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.postEvent
@@ -52,6 +53,15 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
         customBtnListData.postValue(AudioPlay.bookSource?.customButton == true)
         titleData.postValue(book.name)
         coverData.postValue(book.getDisplayCover())
+        
+        // 重新进入界面时，主动推送一次当前内存中的时长和进度，避免因 LiveEventBus 粘性事件丢失导致界面显示 00:00
+        /*
+        if (AudioPlay.durAudioSize > 0) {
+            postEvent(EventBus.AUDIO_SIZE, AudioPlay.durAudioSize)
+            postEvent(EventBus.AUDIO_PROGRESS, AudioPlay.durChapterPos)
+        }
+        */
+        
         if (book.tocUrl.isEmpty() && !loadBookInfo(book)) {
             return
         }
@@ -61,6 +71,8 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
     }
 
     private suspend fun loadBookInfo(book: Book): Boolean {
+        if (book.isLocalAudio) return true
+        
         val bookSource = AudioPlay.bookSource ?: return true
         try {
             WebBook.getBookInfoAwait(bookSource, book)
@@ -72,6 +84,23 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
     }
 
     private suspend fun loadChapterList(book: Book): Boolean {
+        //本地有声书
+        if (book.isLocalAudio) {
+            return kotlin.runCatching {
+                io.legado.app.model.localBook.LocalBook.getChapterList(book).let {
+                    appDb.bookChapterDao.delByBook(book.bookUrl)
+                    appDb.bookChapterDao.insert(*it.toTypedArray())
+                    appDb.bookDao.update(book)
+                    AudioPlay.chapterSize = it.size
+                    AudioPlay.simulatedChapterSize = book.simulatedTotalChapterNum()
+                    AudioPlay.upDurChapter()
+                }
+                true
+            }.onFailure {
+                context.toastOnUi(R.string.error_load_toc)
+            }.getOrDefault(false)
+        }
+
         val bookSource = AudioPlay.bookSource ?: return true
         try {
             val oldBook = book.copy()

@@ -31,6 +31,7 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isUri
 import io.legado.app.utils.launch
 import io.legado.app.utils.putPrefInt
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -119,12 +120,21 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onClickSelectBarMainAction() {
-        viewModel.addToBookshelf(adapter.selected) {
-            adapter.selected.forEach {
-                it.isOnBookShelf = true
+        if (adapter.selected.isEmpty()) {
+            val currentDoc = viewModel.subDocs.lastOrNull() ?: viewModel.rootDoc
+            if (currentDoc != null) {
+                viewModel.importFolderAsAudioBook(currentDoc) {
+                    toastOnUi("操作完成")
+                }
             }
-            adapter.selected.clear()
-            adapter.notifyDataSetChanged()
+        } else {
+            viewModel.addToBookshelf(adapter.selected) {
+                adapter.selected.forEach {
+                    it.isOnBookShelf = true
+                }
+                adapter.selected.clear()
+                adapter.notifyDataSetChanged()
+            }
         }
     }
 
@@ -134,6 +144,7 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
+        binding.selectActionBar.mainActionAlwaysEnabled = true
         binding.selectActionBar.setMainActionText(R.string.add_to_bookshelf)
         binding.selectActionBar.inflateMenu(R.menu.import_book_sel)
         binding.selectActionBar.setOnMenuItemClickListener(this)
@@ -307,6 +318,11 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
 
     override fun upCountView() {
         binding.selectActionBar.upCountView(adapter.selected.size, adapter.checkableCount)
+        if (adapter.selected.isEmpty()) {
+            binding.selectActionBar.setMainActionText("导入整个文件夹")
+        } else {
+            binding.selectActionBar.setMainActionText(R.string.add_to_bookshelf)
+        }
     }
 
     override fun startRead(fileDoc: FileDoc) {
