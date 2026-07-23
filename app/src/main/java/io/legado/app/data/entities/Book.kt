@@ -436,6 +436,10 @@ data class Book(
         if (ReadBook.book?.bookUrl == bookUrl) {
             ReadBook.book = null
         }
+        if (io.legado.app.model.AudioPlay.book?.bookUrl == bookUrl) {
+            io.legado.app.model.AudioPlay.stop()
+            io.legado.app.model.AudioPlay.book = null
+        }
         appDb.bookDao.delete(this)
     }
 
