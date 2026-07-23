@@ -134,6 +134,7 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
                 }
                 adapter.selected.clear()
                 adapter.notifyDataSetChanged()
+                adapter.upCheckableCount()
             }
         }
     }
