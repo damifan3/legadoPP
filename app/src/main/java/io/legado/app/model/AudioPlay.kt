@@ -380,18 +380,72 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun prev() {
-        if (durChapterIndex > 0) {
-            playJob?.cancel()
-            stopPlay()
-            durChapterIndex -= 1
-            durChapterPos = 0
-            durPlayUrl = ""
-            durLyric = null
-            // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
-            upDurChapter()
-            playJob = Coroutine.async {
-                saveRead()
-                loadPlayUrl()
+        when (playMode) {
+            PlayMode.LIST_END_STOP -> {
+                if (durChapterIndex > 0) {
+                    playJob?.cancel()
+                    stopPlay()
+                    durChapterIndex -= 1
+                    durChapterPos = 0
+                    durPlayUrl = ""
+                    durLyric = null
+                    // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+                    upDurChapter()
+                    playJob = Coroutine.async {
+                        saveRead()
+                        loadPlayUrl()
+                    }
+                } else {
+                    appCtx.toastOnUi("已经是第一章了")
+                }
+            }
+
+            PlayMode.SINGLE_LOOP -> {
+                playJob?.cancel()
+                stopPlay()
+                durChapterPos = 0
+                durPlayUrl = ""
+                durLyric = null
+                // 立即同步更新 durChapter（单曲循环 index 不变，但仍需刷新状态）
+                upDurChapter()
+                playJob = Coroutine.async {
+                    saveRead()
+                    loadPlayUrl()
+                }
+            }
+
+            PlayMode.RANDOM -> {
+                playJob?.cancel()
+                stopPlay()
+                if (simulatedChapterSize > 0) {
+                    durChapterIndex = (0 until simulatedChapterSize).random()
+                }
+                durChapterPos = 0
+                durPlayUrl = ""
+                durLyric = null
+                // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+                upDurChapter()
+                playJob = Coroutine.async {
+                    saveRead()
+                    loadPlayUrl()
+                }
+            }
+
+            PlayMode.LIST_LOOP -> {
+                playJob?.cancel()
+                stopPlay()
+                if (simulatedChapterSize > 0) {
+                    durChapterIndex = (durChapterIndex - 1 + simulatedChapterSize) % simulatedChapterSize
+                }
+                durChapterPos = 0
+                durPlayUrl = ""
+                durLyric = null
+                // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+                upDurChapter()
+                playJob = Coroutine.async {
+                    saveRead()
+                    loadPlayUrl()
+                }
             }
         }
     }
@@ -414,8 +468,11 @@ object AudioPlay : CoroutineScope by MainScope() {
                         loadPlayUrl()
                     }
                 } else {
+                    // 提示用户已经是最后一章，避免用户不知道发生了什么
+                    appCtx.toastOnUi("已经是最后一章了")
+                    // 只停止播放，不调用 stop() 关闭整个服务
+                    // 这样可以保留通知栏播放器状态（显示为暂停），以便用户可以进行重新播放或上一章等操作
                     stopPlay()
-                    stop()
                 }
             }
 
