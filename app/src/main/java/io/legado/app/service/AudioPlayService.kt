@@ -154,6 +154,7 @@ class AudioPlayService : BaseService(),
         intent?.action?.let { action ->
             when (action) {
                 IntentAction.play, IntentAction.playNew -> {
+                    //AppLog.put("AudioPlayService: onStartCommand received ${action}")
                     exoPlayer.stop()
                     upPlayProgressJob?.cancel()
                     pause = false
@@ -226,6 +227,11 @@ class AudioPlayService : BaseService(),
             wakeLock.acquire()
             wifiLock?.acquire()
         }
+        
+        // 在播放新章节时，立即更新 MediaSession metadata 和通知
+        // 确保通知栏系统媒体控件显示正确的章节标题
+        //AppLog.put("AudioPlayService: play() started for chapter ${AudioPlay.durChapter?.index} ${AudioPlay.durChapter?.title}")
+        upMediaMetadata()
         upAudioPlayNotification()
         if (!requestFocus()) {
             return
@@ -329,6 +335,7 @@ class AudioPlayService : BaseService(),
      * 调节进度
      */
     private fun adjustProgress(position: Int) {
+        //AppLog.put("AudioPlayService: adjustProgress called, position=$position")
         this.position = position
         exoPlayer.seekTo(position.toLong())
     }
@@ -352,6 +359,7 @@ class AudioPlayService : BaseService(),
      */
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
+        //AppLog.put("AudioPlayService: onPlaybackStateChanged state=$playbackState")
         when (playbackState) {
             Player.STATE_IDLE -> {
                 // 空闲
@@ -389,15 +397,28 @@ class AudioPlayService : BaseService(),
         upAudioPlayNotification()
     }
 
+    private var upMetadataJob: Job? = null
+
     private fun upMediaMetadata() {
-        val metadata = MediaMetadataCompat.Builder()
-            .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, cover)
-            .putText(MediaMetadataCompat.METADATA_KEY_TITLE, AudioPlay.durChapter?.title ?: "null")
-            .putText(MediaMetadataCompat.METADATA_KEY_ARTIST, AudioPlay.book?.name ?: "null")
-            .putText(MediaMetadataCompat.METADATA_KEY_ALBUM, AudioPlay.book?.author ?: "null")
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, exoPlayer.duration)
-            .build()
-        mediaSessionCompat.setMetadata(metadata)
+        upMetadataJob?.cancel()
+        upMetadataJob = lifecycleScope.launch {
+            delay(300) // Debounce rapid metadata updates to prevent MediaSession dropping them
+            //刚解析的音频，精确总时长 exoPlayer.duration 可能还没出来，使用 AudioPlay.durAudioSize 兜底
+            val duration = if (exoPlayer.duration > 0) exoPlayer.duration else AudioPlay.durAudioSize.toLong()
+            //AppLog.put("upMediaMetadata: 标题修正为这一章: ${AudioPlay.durChapter?.index}")
+            val metadata = MediaMetadataCompat.Builder()
+                .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, cover)
+                .putText(MediaMetadataCompat.METADATA_KEY_TITLE, AudioPlay.durChapter?.title ?: "null")
+                // 新增：设置显示的标题
+                .putText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, AudioPlay.durChapter?.title ?: "null")
+                // 新增：赋予媒体唯一的 ID（音频URL + 章节 Index，确保同文件的不同章节 ID 唯一）
+                .putText(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "${AudioPlay.durPlayUrl}_${AudioPlay.durChapter?.index}")
+                .putText(MediaMetadataCompat.METADATA_KEY_ARTIST, AudioPlay.book?.name ?: "null")
+                .putText(MediaMetadataCompat.METADATA_KEY_ALBUM, AudioPlay.book?.author ?: "null")
+                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
+                .build()
+            mediaSessionCompat.setMetadata(metadata)
+        }
     }
 
     /**
@@ -653,6 +674,7 @@ class AudioPlayService : BaseService(),
         if (nSubtitle.isNullOrEmpty()) {
             nSubtitle = getString(R.string.audio_play_s)
         }
+        //AppLog.put("AudioPlayService: createNotification with title=$nTitle, subtitle=$nSubtitle")
         val builder = NotificationCompat
             .Builder(this@AudioPlayService, AppConst.channelIdReadAloud)
             .setSmallIcon(R.drawable.ic_volume_up)
@@ -708,7 +730,9 @@ class AudioPlayService : BaseService(),
     }
 
     private fun upAudioPlayNotification() {
+        upNotificationJob?.cancel()
         upNotificationJob = execute {
+            delay(300) // Debounce rapid updates to prevent SystemUI rate-limiting
             try {
                 val notification = createNotification()
                 notificationManager.notify(NotificationId.AudioPlayService, notification.build())
