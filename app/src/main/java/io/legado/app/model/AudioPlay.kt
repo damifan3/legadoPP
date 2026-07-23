@@ -284,7 +284,7 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     /**
-     * 更新当前章节
+     * 根据 durChapterIndex 更新当前章节 durChapter
      */
     fun upDurChapter() {
         val book = book ?: return
@@ -370,6 +370,8 @@ object AudioPlay : CoroutineScope by MainScope() {
             durChapterPos = 0
             durPlayUrl = ""
             durLyric = null
+            // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+            upDurChapter()
             playJob = Coroutine.async {
                 saveRead()
                 loadPlayUrl()
@@ -385,6 +387,8 @@ object AudioPlay : CoroutineScope by MainScope() {
             durChapterPos = 0
             durPlayUrl = ""
             durLyric = null
+            // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+            upDurChapter()
             playJob = Coroutine.async {
                 saveRead()
                 loadPlayUrl()
@@ -403,6 +407,8 @@ object AudioPlay : CoroutineScope by MainScope() {
                     durChapterPos = 0
                     durPlayUrl = ""
                     durLyric = null
+                    // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+                    upDurChapter()
                     playJob = Coroutine.async {
                         saveRead()
                         loadPlayUrl()
@@ -419,6 +425,8 @@ object AudioPlay : CoroutineScope by MainScope() {
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
+                // 立即同步更新 durChapter（单曲循环 index 不变，但仍需刷新状态）
+                upDurChapter()
                 playJob = Coroutine.async {
                     saveRead()
                     loadPlayUrl()
@@ -432,6 +440,8 @@ object AudioPlay : CoroutineScope by MainScope() {
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
+                // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+                upDurChapter()
                 playJob = Coroutine.async {
                     saveRead()
                     loadPlayUrl()
@@ -445,6 +455,8 @@ object AudioPlay : CoroutineScope by MainScope() {
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
+                // 立即同步更新 durChapter，确保后续通知刷新使用新章节标题
+                upDurChapter()
                 playJob = Coroutine.async {
                     saveRead()
                     loadPlayUrl()
