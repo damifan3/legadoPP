@@ -32,6 +32,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancelChildren
 import splitties.init.appCtx
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.text.trim
 
 @SuppressLint("StaticFieldLeak")
@@ -59,6 +60,13 @@ object AudioPlay : CoroutineScope by MainScope() {
     var playMode = PlayMode.LIST_END_STOP
     var status = Status.STOP
     private var playJob: io.legado.app.help.coroutine.Coroutine<*>? = null
+    /**
+     * 递增的章节加载序列号，用于解决 skipTo/prev/next 中
+     * stopPlay Intent 与 play Intent 到达 Service 顺序不可控的竞态问题。
+     * 每次切换章节操作通过 incrementAndGet() 原子地递增并捕获当前值，
+     * Service 端据此丢弃过期的 stopPlay。
+     */
+    val loadSequence = AtomicLong(0)
     private var activityContext: Context? = null
     private var serviceContext: Context? = null
     private val context: Context get() = activityContext ?: serviceContext ?: appCtx
@@ -93,7 +101,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         } else {
             chapterSize
         }
+        //切换章节
         if (durChapterIndex != book.durChapterIndex) {
+            loadSequence.incrementAndGet()  // 原子递增序列号，确保 stopPlay 不被旧的 play Intent 覆盖
             stopPlay()
             durChapterIndex = book.durChapterIndex
             durChapterPos = book.durChapterPos
@@ -170,12 +180,13 @@ object AudioPlay : CoroutineScope by MainScope() {
     /**
      * 加载播放URL
      */
-    private fun loadPlayUrl() {
+    private fun loadPlayUrl(seq: Long = loadSequence.get()) {
         val index = durChapterIndex
         if (addLoading(index)) {
             val book = book
             
             if (book != null && book.isLocalAudio) {
+                //更改 durChapter 等操作
                 upDurChapter()
                 val chapter = durChapter
                 if (chapter == null) {
@@ -192,7 +203,11 @@ object AudioPlay : CoroutineScope by MainScope() {
 
                 //chapter 的 url 就是文件路径，
                 // 详见 io.legado.app.model.localBook.AudioFile.getChapterList
-                contentLoadFinish(chapter, chapter.url)
+                // 检查序列号是否仍有效（本地有声书同步分支无挂起点，cancel() 无法中断）
+                // 走到这里的时候，seq还是当初传入的形参吗？如果不是，证明这个任务已经过时了，不再执行。
+                if (seq == loadSequence.get()) {
+                    contentLoadFinish(chapter, chapter.url, seq)
+                }
                 upLoading(false)
                 removeLoading(index)
                 return
@@ -216,7 +231,7 @@ object AudioPlay : CoroutineScope by MainScope() {
                 // 离线缓存拦截
                 val cachedFile = io.legado.app.model.AudioCache.getCachedFile(book, chapter)
                 if (cachedFile != null) {
-                    contentLoadFinish(chapter, android.net.Uri.fromFile(cachedFile).toString())
+                    contentLoadFinish(chapter, android.net.Uri.fromFile(cachedFile).toString(), seq)
                     upLoading(false)
                     removeLoading(index)
                     return
@@ -228,7 +243,7 @@ object AudioPlay : CoroutineScope by MainScope() {
                         if (content.isEmpty()) {
                             appCtx.toastOnUi("未获取到资源链接")
                         } else {
-                            contentLoadFinish(chapter, content)
+                            contentLoadFinish(chapter, content, seq)
                         }
                     }.onError {
                         AppLog.put("获取资源链接出错\n$it", it, true)
@@ -249,37 +264,40 @@ object AudioPlay : CoroutineScope by MainScope() {
     /**
      * 加载完成
      */
-    private fun contentLoadFinish(chapter: BookChapter, content: String) {
-        if (chapter.index == book?.durChapterIndex) {
+    private fun contentLoadFinish(chapter: BookChapter, content: String, seq: Long = loadSequence.get()) {
+        // 双重校验：章节索引匹配 且 序列号未过期
+        if (chapter.index == durChapterIndex && seq == loadSequence.get()) {
             durPlayUrl = content
             durLyric = chapter.getVariable("lyric")
-            upPlayUrl()
+            upPlayUrl(seq)
         }
     }
 
-    private fun upPlayUrl() {
+    private fun upPlayUrl(seq: Long = loadSequence.get()) {
         if (isPlayToEnd()) {
-            playNew()
+            playNew(seq)
         } else {
-            play()
+            play(seq)
         }
     }
 
     /**
      * 播放当前章节
      */
-    fun play() {
+    fun play(seq: Long = loadSequence.get()) {
         context.startService<AudioPlayService> {
             action = IntentAction.play
+            putExtra("seq", seq)
         }
     }
 
     /**
      * 从头播放新章节
      */
-    private fun playNew() {
+    private fun playNew(seq: Long = loadSequence.get()) {
         context.startService<AudioPlayService> {
             action = IntentAction.playNew
+            putExtra("seq", seq)
         }
     }
 
@@ -288,6 +306,10 @@ object AudioPlay : CoroutineScope by MainScope() {
      */
     fun upDurChapter() {
         val book = book ?: return
+        //book.durChapterIndex是要持久化到数据库的，异步赋值，往往有延时，这里只能输出上一个值
+        //切换章节后，只能输出上一个章节的index
+        //AppLog.put("upDurChapter\n${book.name}\n${book.durChapterIndex}")
+        AppLog.put("upDurChapter\n${book.name}\n${durChapterIndex}")
         durChapter = appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)
         durAudioSize = durChapter?.end?.toInt() ?: 0
         // 提前获取本地音频时长，使得在未点击播放前即可拖动进度条
@@ -365,14 +387,15 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun skipTo(index: Int) {
         if (index in 0..<simulatedChapterSize) {
             playJob?.cancel()
-            stopPlay()
+            val seq = loadSequence.incrementAndGet()  // 原子递增并捕获序列号
+            stopPlay(seq)
             durChapterIndex = index
             durChapterPos = 0
             durPlayUrl = ""
             durLyric = null
             playJob = Coroutine.async {
                 saveRead()
-                loadPlayUrl()
+                loadPlayUrl(seq)
             }
         }
     }
@@ -380,74 +403,76 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun prev() {
         if (durChapterIndex > 0) {
             playJob?.cancel()
-            stopPlay()
+            val seq = loadSequence.incrementAndGet()  // 原子递增并捕获序列号
+            stopPlay(seq)
             durChapterIndex -= 1
             durChapterPos = 0
             durPlayUrl = ""
             durLyric = null
             playJob = Coroutine.async {
                 saveRead()
-                loadPlayUrl()
+                loadPlayUrl(seq)
             }
         }
     }
 
     fun next() {
         upReadTime()
+        val seq = loadSequence.incrementAndGet()  // 原子递增并捕获序列号
         when (playMode) {
             PlayMode.LIST_END_STOP -> {
                 if (durChapterIndex + 1 < simulatedChapterSize) {
                     playJob?.cancel()
-                    stopPlay()
+                    stopPlay(seq)
                     durChapterIndex += 1
                     durChapterPos = 0
                     durPlayUrl = ""
                     durLyric = null
                     playJob = Coroutine.async {
                         saveRead()
-                        loadPlayUrl()
+                        loadPlayUrl(seq)
                     }
                 } else {
-                    stopPlay()
+                    stopPlay(seq)
                     stop()
                 }
             }
 
             PlayMode.SINGLE_LOOP -> {
                 playJob?.cancel()
-                stopPlay()
+                stopPlay(seq)
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
                 playJob = Coroutine.async {
                     saveRead()
-                    loadPlayUrl()
+                    loadPlayUrl(seq)
                 }
             }
 
             PlayMode.RANDOM -> {
                 playJob?.cancel()
-                stopPlay()
+                stopPlay(seq)
                 durChapterIndex = (0 until simulatedChapterSize).random()
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
                 playJob = Coroutine.async {
                     saveRead()
-                    loadPlayUrl()
+                    loadPlayUrl(seq)
                 }
             }
 
             PlayMode.LIST_LOOP -> {
                 playJob?.cancel()
-                stopPlay()
+                stopPlay(seq)
                 durChapterIndex = (durChapterIndex + 1) % simulatedChapterSize
                 durChapterPos = 0
                 durPlayUrl = ""
                 durLyric = null
                 playJob = Coroutine.async {
                     saveRead()
-                    loadPlayUrl()
+                    loadPlayUrl(seq)
                 }
             }
         }
@@ -471,10 +496,11 @@ object AudioPlay : CoroutineScope by MainScope() {
         context.startService(intent)
     }
 
-    fun stopPlay() {
+    fun stopPlay(seq: Long = loadSequence.get()) {
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
                 action = IntentAction.stopPlay
+                putExtra("seq", seq)
             }
         }
     }
@@ -524,7 +550,9 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     private fun isPlayToEnd(): Boolean {
-        return durChapterIndex + 1 == simulatedChapterSize
+        // durAudioSize 为 0 表示还未获取到时长，此时不应判为已播完
+        return durAudioSize > 0
+                && durChapterIndex + 1 == simulatedChapterSize
                 && durChapterPos == durAudioSize
     }
 

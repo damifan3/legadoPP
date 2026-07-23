@@ -85,6 +85,11 @@ class AudioPlayService : BaseService(),
         var url: String = ""
             private set
 
+        /** 当前有效的播放序列号，用于判断 stopPlay Intent 是否过期 */
+        @JvmStatic
+        var currentPlaySeq: Long = 0
+            private set
+
         private const val MEDIA_SESSION_ACTIONS = (PlaybackStateCompat.ACTION_PLAY
                 or PlaybackStateCompat.ACTION_PAUSE
                 or PlaybackStateCompat.ACTION_PLAY_PAUSE
@@ -154,6 +159,19 @@ class AudioPlayService : BaseService(),
         intent?.action?.let { action ->
             when (action) {
                 IntentAction.play, IntentAction.playNew -> {
+                    // 更新当前播放序列号，后到的旧 stopPlay 将被忽略
+                    val seq = intent.getLongExtra("seq", 0)
+                    AppLog.put("seq=$seq, currentPlaySeq=$currentPlaySeq")
+                    // 如果该 play 来自旧的切换操作（更新的 play 已先到达），忽略
+                    if (seq < currentPlaySeq) {
+                        AppLog.put("忽略过期的 play: seq=$seq, currentPlaySeq=$currentPlaySeq")
+                        //这个方法必须返回 Int，不能直接 return
+                        // 让基类 BaseService 返回它配置好的重启策略值
+                        // （通常是 START_NOT_STICKY）。效果等价于 return START_NOT_STICKY，但不用硬编码
+                        return super.onStartCommand(intent, flags, startId)
+                    }
+                    currentPlaySeq = seq
+
                     exoPlayer.stop()
                     upPlayProgressJob?.cancel()
                     pause = false
@@ -170,6 +188,12 @@ class AudioPlayService : BaseService(),
                 }
 
                 IntentAction.stopPlay -> {
+                    // 如果该 stopPlay 来自旧的切换操作（对应的 play 已先到达），忽略它
+                    val seq = intent.getLongExtra("seq", 0)
+                    if (seq <= currentPlaySeq) {
+                        AppLog.put("忽略过期的 stopPlay: seq=$seq, currentPlaySeq=$currentPlaySeq")
+                        return super.onStartCommand(intent, flags, startId)
+                    }
                     exoPlayer.stop()
                     upPlayProgressJob?.cancel()
                     AudioPlay.status = Status.STOP
