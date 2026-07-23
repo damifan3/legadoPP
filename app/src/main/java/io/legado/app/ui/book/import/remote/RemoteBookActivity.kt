@@ -155,6 +155,7 @@ class RemoteBookActivity : BaseImportBookActivity<RemoteBookViewModel>(),
         viewModel.addToBookshelf(adapter.selected) {
             adapter.selected.clear()
             adapter.notifyDataSetChanged()
+            adapter.upCheckableCount()
             binding.refreshProgressBar.isAutoLoading = false
         }
     }

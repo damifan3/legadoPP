@@ -100,7 +100,7 @@ class RemoteBookAdapter(context: Context, val callBack: CallBack) :
         }
     }
 
-    private fun upCheckableCount() {
+    fun upCheckableCount() {
         checkableCount = 0
         getItems().forEach {
             if (!it.isDir && !it.isOnBookShelf) {
