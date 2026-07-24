@@ -86,11 +86,10 @@ jobs:
             echo "updated=yes" >> $GITHUB_OUTPUT
             if [ -f "app/src/main/assets/updateLog.md" ]; then
               UPDATED_CONTENT=$(awk '
-              /^\*\*20/ && !found {
-                found=1
+              /^\*\*20/ {
+                if (!found) { found=1 } else { exit }
               }
               found {
-                if (NF == 0) exit
                 print
               }
               ' app/src/main/assets/updateLog.md)
