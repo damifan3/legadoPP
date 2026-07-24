@@ -1,11 +1,6 @@
 <a id="top"></a>
 # [English](English.md) [中文](README.md)
-<div align="center">
-  <a href="https://jb.gg/OpenSourceSupport" target="_blank">
-    <img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" alt="idea" style="vertical-align: middle; margin-right: 10px;"/>
-  </a>
-  <img src="https://gitee.com/lyc486/yuedu/raw/master/icon_android.png" alt="icon_android" style="vertical-align: middle;"/>
-</div>
+
 
 <div align="center">
 <img width="85" height="85" src="https://iili.io/CouAWva.png" alt="legado"/>
@@ -49,8 +44,15 @@ New features are welcome for testing, feel free to report issues.
 * **Shortcut Navigation for Source Editing**: Introduced a shortcut navigation feature in the book source editing interface, extracting it as a reusable component.
     > No more sore thumbs scrolling up and down while editing book sources.
 
-* **UI Layout Micro-optimizations**: 
-    > Added a cache button to the book details page to reduce operation depth; added a visual progress bar.
+* **Audiobook Features Enhancement**: Improved the previously basic audiobook-related functions.
+    - Offline cache and local playback
+    - Bug and race condition fixes
+    
+* **UI & Interaction Optimization**: 
+    - Added a cache button to the book details page to reduce operation depth; added a visual progress bar
+    - Visual progress bar for caching
+    - Added features like "Copy Chapter URL" in the reading page
+    - Universal file/folder import interaction
 
 
 # Function-Main Features [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-Main-Features-)
