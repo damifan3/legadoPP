@@ -1,11 +1,5 @@
 <a id="top"></a>
 # [English](English.md) [中文](README.md)
-<div align="center">
-  <a href="https://jb.gg/OpenSourceSupport" target="_blank">
-    <img width="24" height="24" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg" alt="idea" style="vertical-align: middle; margin-right: 10px;"/>
-  </a>
-  <img src="https://gitee.com/lyc486/yuedu/raw/master/icon_android.png" alt="icon_android" style="vertical-align: middle;"/>
-</div>
 
 <div align="center">
 <img width="85" height="85" src="https://iili.io/CouAWva.png" alt="legado"/>
@@ -46,12 +40,19 @@
     > 每天再也不用担心忘了追更。
 
 * **章节识别与缓存优化**: 实现目录变动时本地缓存自动重命名，解决级联删除问题。
-    > 对收藏党非常有用，防止小黑屋使缓存失效：
+    > 对收藏党非常有用，防止小黑屋使缓存失效。
 * **书源编辑快捷导航**: 在书源编辑界面引入快捷导航功能，将其提取为可复用组件。
     > 书源编辑再也不用划到手酸了。
 
-* **UI布局微优化**: 
-    > 书籍详情页加入缓存按钮，减少操作深度；加入可视化条。
+* **有声书功能完善**：将原本基础的有声书相关功能完善。
+    - 离线缓存和本地播放
+    - bug 和竞态问题修复
+    
+* **UI 交互优化**: 
+    - 书籍详情页加入缓存按钮，减少操作深度；加入可视化条
+    - 缓存可视化进度条
+    - 正文页加入复制本章 url 等功能
+    - 通用的文件/文件夹导入交互
 
 # Function-主要功能 [![](https://img.shields.io/badge/-Function-F5F5F5.svg)](#Function-主要功能-)
 [English](English.md)
