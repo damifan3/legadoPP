@@ -64,12 +64,66 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
                 binding.rlLoading.gone()
             }
         }
-        viewModel.initContent {
-            binding.contentView.setText(it)
+        viewModel.initContent { text ->
+            binding.contentView.setText(text)
             binding.contentView.post {
                 binding.contentView.apply {
-                    val lineIndex = layout.getLineForOffset(ReadBook.durChapterPos)
-                    val lineHeight = layout.getLineTop(lineIndex)
+                    val startPos = arguments?.getInt("chapterPos") ?: ReadBook.durChapterPos
+                    var targetOffset = startPos
+                    val textChapter = ReadBook.curTextChapter
+                    if (textChapter != null) {
+                        val page = textChapter.getPageByReadPos(startPos)
+                        // 找出真正包含该光标的排版行（条件改为查找“起始位置小于等于光标的最后一行”，这才是真正包含当前光标的正确行）
+                        val textLine = page?.lines?.lastOrNull { line ->
+                            line.chapterPosition <= startPos
+                        } ?: page?.lines?.firstOrNull()
+
+                        if (textLine != null) {
+                            //正在读的段落（排版层）
+                            val pNum = textLine.paragraphNum
+                            //通过自然段落号在整个 textChapter.pages 找出该段的第一行排版数据 firstLineOfP
+                            val firstLineOfP = textChapter.pages.flatMap { it.lines }.firstOrNull { it.paragraphNum == pNum }
+                            //段落内偏移
+                            val offsetInP = if (firstLineOfP != null) {
+                                startPos - firstLineOfP.chapterPosition
+                            } else 0
+
+                            // 计算排版层中属于标题的段落数（如果有标题通常为1，没有则是0）
+                            val titlePCount = textChapter.pages.flatMap { it.lines }
+                                .filter { it.isTitle }
+                                .map { it.paragraphNum }
+                                .distinct().count()
+                            // 真正的目标跳过次数 = 排版层段落号 - 标题段落数
+                            val targetPNum = pNum - titlePCount
+
+                            if (targetPNum > 0) {
+                                var currentPNum = 1
+                                var offset = 0
+                                //1. 第1个\n（从1开始）是第2段落（从1开始）的开始。要定位第十个段落（pNum=10），就要找到第9个\n，
+                                //2. 用 <, 循环结束时currentPNum（从1开始）正好=10=pNum，循环体执行了9次，\n找到了第9个
+                                //3. 但是正文中有标题（pNum=1），源码编辑中没有这一段落，所以要减去标题行数
+                                while (currentPNum < targetPNum && offset < text.length) {
+                                    val nextLineBreak = text.indexOf('\n', offset)
+                                    if (nextLineBreak == -1) break
+                                    offset = nextLineBreak + 1
+                                    currentPNum++
+                                }
+                                targetOffset = offset + maxOf(0, offsetInP)
+                            } else {
+                                targetOffset = maxOf(0, offsetInP)
+                            }
+
+                            if (targetOffset > text.length) {
+                                targetOffset = text.length
+                            }
+                        }
+                    }
+                    val lineIndex = layout.getLineForOffset(targetOffset)
+                    var lineHeight = layout.getLineTop(lineIndex)
+                    // 计算允许的最大滚动距离 (文字总排版高度 - 控件实际展示高度)
+                    val maxScroll = maxOf(0, layout.height - (height - compoundPaddingTop - compoundPaddingBottom))
+                    // 限制 lineHeight 不能超出最大滚动边界
+                    lineHeight = minOf(lineHeight, maxScroll)
                     scrollTo(0, lineHeight)
                 }
             }
