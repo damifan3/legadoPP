@@ -41,6 +41,9 @@ New features are welcome for testing, feel free to report issues.
 
 * **Chapter Identification & Cache Optimization**: Automatically renames the local cache when the table of contents changes, solving the cascade deletion issue.
     > Very useful for collectors, prevents the cache from becoming invalid when a chapter enters the black room.
+* **Content Edit Optimization**: Long press on text to enter the edit page; fixed positioning offset issues when there are images.
+    > Very beneficial for proofreaders!
+
 * **Shortcut Navigation for Source Editing**: Introduced a shortcut navigation feature in the book source editing interface, extracting it as a reusable component.
     > No more sore thumbs scrolling up and down while editing book sources.
 

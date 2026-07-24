@@ -877,6 +877,25 @@ class ReadBookActivity : BaseReadBookActivity(),
      */
     override fun onMenuItemSelected(itemId: Int): Boolean {
         when (itemId) {
+            R.id.menu_edit_content -> {
+                val selectStartPos = binding.readView.curPage.selectStartPos
+                val lineIndex = selectStartPos.lineIndex
+                var targetPos = ReadBook.durChapterPos
+                if (lineIndex >= 0) {
+                    // 提取到长按文字时所选游标的具体行信息。
+                    val line = binding.readView.curPage.textPage.getLine(lineIndex)
+                    // 获取所在行的基础偏移 line.chapterPosition，再加上选中游标在当前行的内部偏移量 selectStartPos.columnIndex，
+                    // 两者相加得出了排版层最精确无误的光标定位点。
+                    targetPos = line.chapterPosition + selectStartPos.columnIndex
+                }
+                val dialog = ContentEditDialog()
+                dialog.arguments = android.os.Bundle().apply {
+                    putInt("chapterPos", targetPos)
+                }
+                showDialogFragment(dialog)
+                return true
+            }
+
             R.id.menu_aloud -> when (AppConfig.contentSelectSpeakMod) {
                 1 -> lifecycleScope.launch {
                     binding.readView.aloudStartSelect()
