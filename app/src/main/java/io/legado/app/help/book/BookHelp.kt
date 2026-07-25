@@ -169,8 +169,8 @@ object BookHelp {
         val usedOldPrefixes = HashSet<String>() // 记录已被匹配走的旧前缀，防止被多个新章节重复占用
 
         for (newChapter in newToc) {
-            val newIdentifier = getIdentifier(newChapter.title)
-            val newPrefix = formatPrefix(newChapter.index, newIdentifier)
+            var newIdentifier = getIdentifier(newChapter.title)
+            var newPrefix = formatPrefix(newChapter.index, newIdentifier)
 
             //先进行url匹配
             var matchMode = "URL匹配"
@@ -211,10 +211,24 @@ object BookHelp {
 
             if (oldPrefix != null) {
                 usedOldPrefixes.add(oldPrefix) // 标记为已使用
+
+                val oldUrl = oldPrefixToUrl[oldPrefix] ?: "未知(本地缓存)"
+                val oldTitle = oldPrefixToTitle[oldPrefix] ?: "未知(本地缓存)"
+
+                // URL未变，标题变了的章节保持原来的标题不变
+                if (matchMode == "URL匹配" && oldTitle != "未知(本地缓存)" && oldTitle != newChapter.title) {
+                    val tmpNewTitle = newChapter.title
+                    val tmpNewPrefix = newPrefix
+                    newChapter.title = oldTitle
+                    // 重新计算标识符和前缀
+                    newIdentifier = getIdentifier(newChapter.title)
+                    newPrefix = formatPrefix(newChapter.index, newIdentifier)
+
+                    AppLog.put("缓存迁移（章节名迁移）(${book.name}): URL未变，正常[$matchMode]。\n旧前缀: $oldPrefix -> 新前缀: $tmpNewPrefix -> 最终前缀: $newPrefix\n旧章节名: $oldTitle -> 新章节名:$tmpNewTitle -> 最终章节名: ${newChapter.title}\n旧URL: $oldUrl\n新URL: ${newChapter.url}")
+                }
+
                 if (oldPrefix != newPrefix) {
                     renameMap[oldPrefix] = newPrefix
-                    val oldUrl = oldPrefixToUrl[oldPrefix] ?: "未知(本地缓存)"
-                    val oldTitle = oldPrefixToTitle[oldPrefix] ?: "未知(本地缓存)"
                     // 输出重命名迁移的调试日志，增加详细信息
                     if (matchMode == "URL匹配") {
                         AppLog.put("缓存迁移(${book.name}): URL未变，正常[$matchMode]。\n旧前缀: $oldPrefix -> 新前缀: $newPrefix\n旧章节名: $oldTitle -> 新章节名: ${newChapter.title}\n旧URL: $oldUrl\n新URL: ${newChapter.url}")
