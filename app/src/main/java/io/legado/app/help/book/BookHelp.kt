@@ -639,6 +639,34 @@ object BookHelp {
     }
 
     /**
+     * 重命名章节缓存文件（当修改章节标题时调用）
+     */
+    fun renameChapterCache(book: Book, chapter: BookChapter, newTitle: String) {
+        val cacheDir = downloadDir.getFile(book.cacheFolderName, book.getFolderName())
+        if (!cacheDir.exists() || !cacheDir.isDirectory) return
+
+        chapter.getFileName("nb") // Ensure titleMD5 is initialized for the old title
+        val oldPrefix = String.format("%05d-%s", chapter.index, chapter.titleMD5)
+        
+        chapter.title = newTitle
+        chapter.titleMD5 = null
+        chapter.getFileName("nb") // Compute new titleMD5
+        val newPrefix = String.format("%05d-%s", chapter.index, chapter.titleMD5)
+
+        if (oldPrefix == newPrefix) return
+
+        cacheDir.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.startsWith(oldPrefix)) {
+                val suffix = file.name.substring(oldPrefix.length)
+                val newFile = File(cacheDir, newPrefix + suffix)
+                if (!newFile.exists()) {
+                    file.renameTo(newFile)
+                }
+            }
+        }
+    }
+
+    /**
      * 格式化书名
      */
     fun formatBookName(name: String): String {

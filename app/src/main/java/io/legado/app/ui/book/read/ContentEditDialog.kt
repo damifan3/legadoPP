@@ -157,8 +157,12 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
             alertBinding.editView.setText(chapter.title)
             setCustomView(alertBinding.root)
             okButton {
-                chapter.title = alertBinding.editView.text.toString()
+                val newTitle = alertBinding.editView.text.toString()
+                if (newTitle == chapter.title) return@okButton
                 lifecycleScope.launch {
+                    val book = ReadBook.book ?: return@launch
+                    //cache 文件重命名为新的章节名
+                    BookHelp.renameChapterCache(book, chapter, newTitle)
                     withContext(IO) {
                         chapter.update()
                     }
