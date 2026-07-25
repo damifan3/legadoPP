@@ -246,9 +246,12 @@ class BookInfoActivity :
         binding.arcView?.setBgColor(backgroundColor)
         binding.llInfo.setBackgroundColor(backgroundColor)
         binding.ivCoverC.setCardBackgroundColor(backgroundColor)
-        binding.flAction.setBackgroundColor(bottomBackground)
+        //代码动态赋值会覆盖竞态xml定义。
+        binding.flAction.setBackgroundColor(backgroundColor)
         binding.vwBg.applyNavigationBarPadding()
-        binding.tvShelf.setTextColor(getPrimaryTextColor(ColorUtils.isColorLight(bottomBackground)))
+        val isLight = ColorUtils.isColorLight(backgroundColor)
+        binding.tvShelf.setTextColor(getPrimaryTextColor(isLight))
+        binding.tvDownload.setTextColor(getPrimaryTextColor(isLight))
         binding.tvToc.text = getString(R.string.toc_s, getString(R.string.loading))
         viewModel.bookData.observe(this) { showBook(it) }
         viewModel.chapterListData.observe(this) { upLoading(false, it) }
