@@ -57,10 +57,11 @@ class TocViewModel(application: Application) : BaseViewModel(application) {
             bookData.value?.apply {
                 setReverseToc(!getReverseToc())
                 val toc = appDb.bookChapterDao.getChapterList(bookUrl)
-                val newToc = toc.reversed()
-                newToc.forEachIndexed { index, bookChapter ->
-                    bookChapter.index = index
+                // 使用 mapIndexed 和 copy() 深拷贝出完全独立的新对象，不污染旧目录
+                val newToc = toc.reversed().mapIndexed { index, bookChapter ->
+                    bookChapter.copy(index = index)
                 }
+                io.legado.app.help.book.BookHelp.migrateTocCache(this, toc, newToc)
                 appDb.bookChapterDao.insert(*newToc.toTypedArray())
             }
         }.onSuccess {
