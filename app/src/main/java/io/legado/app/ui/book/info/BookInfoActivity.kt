@@ -394,11 +394,150 @@ class BookInfoActivity :
                 }
             }
 
-            R.id.menu_clear_cache -> viewModel.getBook()?.let {
-                    SourceCallBack.callBackBtn(this, SourceCallBack.CLICK_CLEAR_CACHE, viewModel.bookSource, it, null) {
-                        viewModel.clearCache(it)
+            R.id.menu_clear_cache -> viewModel.getBook()?.let { book ->
+                var dialog: android.content.DialogInterface? = null
+                dialog = alert(title = getString(R.string.clear_cache)) {
+                    // 自定义弹窗视图
+                    customView {
+                        LinearLayout(this@BookInfoActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            val padding = 16.dpToPx()
+                            setPadding(padding, padding, padding, padding)
+
+                            val textView = android.widget.TextView(this@BookInfoActivity).apply {
+                                text = "向右滑动滑块以确认清除缓存"
+                                textSize = 16f
+                                setPadding(0, 0, 0, 16.dpToPx())
+                            }
+                            addView(textView)
+
+                            // 滑块验证控件
+                            val seekBar = object : androidx.appcompat.widget.AppCompatSeekBar(this@BookInfoActivity) {
+                                private var touchOffset = 0f
+                                private var isDraggingThumb = false
+
+                                @android.annotation.SuppressLint("ClickableViewAccessibility")
+                                override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+                                    if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                                        val thumbBounds = thumb?.bounds
+                                        // 扩大一点点击区域，方便手指按住
+                                        if (thumbBounds != null &&
+                                            event.x >= thumbBounds.left - 40 &&
+                                            event.x <= thumbBounds.right + 40
+                                        ) {
+                                            // 记录手指按下位置与滑块中心的偏移量
+                                            touchOffset = event.x - (thumbBounds.left + thumbBounds.width() / 2f)
+                                            isDraggingThumb = true
+                                        } else {
+                                            isDraggingThumb = false
+                                            // 拦截非滑块区域的点击，防止点击进度条空白处导致滑块瞬移
+                                            return false 
+                                        }
+                                    }
+
+                                    if (isDraggingThumb) {
+                                        // 偏移事件 X 坐标，欺骗 SeekBar，让它以为我们永远按在滑块绝对中心
+                                        event.offsetLocation(-touchOffset, 0f)
+                                    }
+                                    val result = super.onTouchEvent(event)
+                                    if (isDraggingThumb) {
+                                        // 恢复事件坐标
+                                        event.offsetLocation(touchOffset, 0f)
+                                    }
+                                    return result
+                                }
+                            }.apply {
+                                // 将 max 提高到 10000 以获得更高精度。
+                                // 如果是 100，滑块离右边缘还有 0.5% 的距离时就会因为四舍五入触发 100，导致视觉上“没到底就触发”。
+                                max = 10000
+                                
+                                val thumbSize = 48.dpToPx() // 48dp 正方形
+                                val themeAccentColor = this@BookInfoActivity.accentColor
+
+                                // 1. 滑块改为正方形且无圆角
+                                val thumbDrawable = android.graphics.drawable.GradientDrawable().apply {
+                                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                    cornerRadius = 0f
+                                    setColor(themeAccentColor)
+                                    setSize(thumbSize, thumbSize)
+                                }
+                                thumb = thumbDrawable
+
+                                // 2. 滑轨进度条与滑块同高
+                                val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+                                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                    cornerRadius = 0f
+                                    setColor(io.legado.app.utils.ColorUtils.withAlpha(themeAccentColor, 0.3f))
+                                }
+                                val fillDrawable = android.graphics.drawable.GradientDrawable().apply {
+                                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                                    cornerRadius = 0f
+                                    setColor(themeAccentColor)
+                                }
+                                val clipDrawable = android.graphics.drawable.ClipDrawable(
+                                    fillDrawable,
+                                    android.view.Gravity.START,
+                                    android.graphics.drawable.ClipDrawable.HORIZONTAL
+                                )
+                                val secondaryDrawable = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+
+                                val layerDrawable = android.graphics.drawable.LayerDrawable(
+                                    arrayOf(bgDrawable, secondaryDrawable, clipDrawable)
+                                ).apply {
+                                    setId(0, android.R.id.background)
+                                    setId(1, android.R.id.secondaryProgress)
+                                    setId(2, android.R.id.progress)
+                                }
+
+                                // 3. 解决滑块初始位置视觉上“超出轨道”的问题
+                                // SeekBar 默认会产生左右 padding 以容纳滑块。这里明确设置 padding 和 thumbOffset。
+                                // 用 InsetDrawable 配合负值 inset，将轨道向左右延伸以填补 padding 产生的空隙。
+                                val inset = -thumbSize / 2
+                                val insetProgressDrawable = android.graphics.drawable.InsetDrawable(
+                                    layerDrawable, inset, 0, inset, 0
+                                )
+
+                                progressDrawable = insetProgressDrawable
+                                minHeight = thumbSize
+                                maxHeight = thumbSize
+                                thumbOffset = thumbSize / 2
+                                setPadding(thumbSize / 2, 0, thumbSize / 2, 0)
+                                
+                                // 禁用默认的滑块断轨效果，防止透明背景截断进度条
+                                splitTrack = false
+                                setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                                    override fun onProgressChanged(seekBar: android.widget.SeekBar, progress: Int, fromUser: Boolean) {
+                                        if (progress == 10000) {
+                                            dialog?.dismiss()
+                                            SourceCallBack.callBackBtn(
+                                                this@BookInfoActivity,
+                                                SourceCallBack.CLICK_CLEAR_CACHE,
+                                                viewModel.bookSource,
+                                                book,
+                                                null
+                                            ) {
+                                                viewModel.clearCache(book)
+                                            }
+                                        }
+                                    }
+
+                                    override fun onStartTrackingTouch(seekBar: android.widget.SeekBar) {}
+
+                                    override fun onStopTrackingTouch(seekBar: android.widget.SeekBar) {
+                                        // 如果没滑到最右侧则回弹
+                                        if (seekBar.progress < 10000) {
+                                            seekBar.progress = 0
+                                        }
+                                    }
+                                })
+                            }
+                            addView(seekBar)
+                        }
                     }
+                    // 保留取消按钮以备不时之需，点击外部和返回键同样会取消操作
+                    neutralButton(R.string.cancel)
                 }
+            }
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_split_long_chapter -> {
                 upLoading(true)
