@@ -39,8 +39,11 @@ New features are welcome for testing, feel free to report issues.
 * **Scheduled Task System**: Ported the scheduled task framework from [legadoT](https://github.com/TaiYouWeb/legadoT) to Legado Sigma. Thanks to the original author!
     > Never worry about forgetting to follow up on latest chapters every day.
 
-* **Chapter Identification & Cache Optimization**: Automatically renames the local cache when the table of contents changes, solving the cascade deletion issue.
-    > Very useful for collectors, prevents the cache from becoming invalid when a chapter enters the black room.
+* **Data Security Priority**:
+    - **Chapter Identification & Cache Optimization**: Automatically renames the local cache when the table of contents changes.
+        > Very useful for collectors, prevents the cache from becoming invalid when a chapter enters the black room.
+    - **Safer UI Interaction**: Added a slider confirmation for clearing cache.
+        > A lesson learned in blood! Accidental touches wiped out all collected chapters! 😭
 * **Content Edit Optimization**: Long press on text to enter the edit page; fixed positioning offset issues when there are images.
     > Very beneficial for proofreaders!
 
