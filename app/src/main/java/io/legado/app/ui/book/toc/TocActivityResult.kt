@@ -15,12 +15,14 @@ class TocActivityResult : ActivityResultContract<String, Array<Any>?>() {
     override fun parseResult(resultCode: Int, intent: Intent?): Array<Any>? {
         if (resultCode == RESULT_OK) {
             intent?.let {
+                //一种设计模式框架回调
                 return arrayOf(
                     it.getIntExtra("index", 0),
                     it.getIntExtra("chapterPos", 0),
                     it.getBooleanExtra("chapterChanged", false),
                     it.getIntExtra("durVolumeIndex", 0),
-                    it.getIntExtra("chapterInVolumeIndex", 0)
+                    it.getIntExtra("chapterInVolumeIndex", 0),
+                    it.getBooleanExtra("isReverse", false)
                 )
             }
         }

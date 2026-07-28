@@ -133,6 +133,7 @@ class BookInfoActivity :
             viewModel.getBook(false)?.let { book ->
                 lifecycleScope.launch {
                     withContext(IO) {
+                        //一种设计模式框架回调 会自动调用TocActivityResult()中的parseResult
                         val durChapterIndex = it[0] as Int
                         val durChapterPos = it[1] as Int
                         val durVolumeIndex = it[3] as Int
@@ -144,7 +145,11 @@ class BookInfoActivity :
                         book.chapterInVolumeIndex = chapterInVolumeIndex
                         appDb.bookDao.update(book)
                     }
-                    startReadActivity(book)
+                    val isReverse = it.getOrElse(5) { false } as Boolean
+                    // 只有当 isReverse 是 false 时（即用户真正点击了某一个章节），才跳转正文页
+                    if (!isReverse) {
+                        startReadActivity(book)
+                    }
                 }
             }
         } ?: let {

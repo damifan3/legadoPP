@@ -1326,6 +1326,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
     }
 
+    //用于阅读页面手动购买
     override fun payAction() {
         val book = ReadBook.book ?: return
         if (book.isLocal) return
