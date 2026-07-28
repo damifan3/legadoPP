@@ -143,6 +143,8 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
                 setResult(RESULT_OK, Intent().apply {
                     putExtra("index", it.durChapterIndex)
                     putExtra("chapterPos", 0)
+                    // 将这个标志位设为 true，详情页和正文页对此解析不同，跳转也不同。
+                    putExtra("isReverse", true)
                 })
             }
 
