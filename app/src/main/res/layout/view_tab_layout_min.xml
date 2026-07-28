@@ -8,5 +8,5 @@
     android:background="@android:color/transparent"
     app:tabBackground="@android:color/transparent"
     app:tabRippleColor="@android:color/transparent"
-    app:tabMaxWidth="100dp"
+    app:tabMaxWidth="140dp"
     app:tabMinWidth="10dp" />
