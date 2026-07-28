@@ -9,6 +9,9 @@
     <dimen name="font_size_normal">14sp</dimen>
     <dimen name="font_size_middle">16sp</dimen>
     <dimen name="font_size_large">18sp</dimen>
+    
+    <!-- Override Material TabLayout multi-line text size to disable shrinking -->
+    <dimen name="design_tab_text_size_2line">14sp</dimen>
 
     <dimen name="fast_scroll_min_thumb_height">24dp</dimen>
 
