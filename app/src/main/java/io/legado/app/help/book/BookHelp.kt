@@ -363,7 +363,16 @@ object BookHelp {
             bookChapter.getFileName(),
         ).writeText(content)
         if (book.isOnLineTxt && AppConfig.tocCountWords) {
-            val wordCount = StringUtils.wordCountFormat(content.length)
+            var realText = content
+             // 1. 剔除唯一残留的 HTML 标签（图片及其长串的 Base64 编码）
+            if (realText.contains("<img", true)) {
+                realText = realText.replace(Regex("<img[^>]*>", RegexOption.IGNORE_CASE), "")
+            }
+            // 2. 借鉴 TextChapterLayout，去掉不可见字符和空白符
+            realText = realText.replace(AppPattern.noWordCountRegex, "")
+            
+            // 3. 计算最终纯净文本的长度
+            val wordCount = StringUtils.wordCountFormat(realText.length)
             bookChapter.wordCount = wordCount
             appDb.bookChapterDao.upWordCount(bookChapter.bookUrl, bookChapter.url, wordCount)
         }
