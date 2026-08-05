@@ -106,6 +106,7 @@ class CacheBookService : BaseService() {
             val chapterCount = appDb.bookChapterDao.getChapterCount(bookUrl)
             val book = cacheBook.book
             if (chapterCount == 0) {
+                //这本书是第一次加入下载，且本地数据库中还没有它的章节列表（chapterCount == 0），那么系统必须先发起一次网络请求去获取整本书的目录
                 cacheBook.setLoading()
                 mutex.withLock {
                     val name = book.name
