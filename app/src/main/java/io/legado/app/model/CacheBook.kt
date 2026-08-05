@@ -134,20 +134,26 @@ object CacheBook {
         workingState.value = value
     }
 
+    //mutex.withLock：使用协程互斥锁（Mutex），确保在同一时刻只能有一个 startProcessJob 任务在运行，避免多个任务实例引发的并发冲突。
     suspend fun startProcessJob(context: CoroutineContext) = mutex.withLock {
+        //setWorkingState(true)：将当前缓存队列的工作状态标记为“运行中”。
         setWorkingState(true)
+        //通过 flow 构建了一个数据流，用来源源不断地“提供”需要下载的书籍
         flow {
+            //只要当前协程没有被取消（isActive），且缓存队列 (cacheBookMap) 中还有书，就持续循环
             while (currentCoroutineContext().isActive && cacheBookMap.isNotEmpty()) {
                 var emitted = false
 
                 cacheBookMap.forEach { (_, model) ->
-                    if (!model.isLoading()) {
+                    //目录已经加载完毕，且有待下载任务
+                    if (!model.isLoading() && model.waitCount > 0) {
                         emit(model)
                         emitted = true
                     }
+                    //workingState 应该是一个状态流（如 StateFlow），它会挂起并等待直到接收到 true 的状态。如果用户暂停了下载（外部将状态设为 false），这里的遍历也会随之挂起，实现“暂停下载”的功能。
                     workingState.first { it }
                 }
-
+                //如果在一次完整遍历中，所有的书都在加载中而没有派发任何新任务（!emitted），则 delay(1000) 休眠 1 秒钟后再重试，避免 while 循环过度消耗 CPU 资源。
                 if (!emitted) {
                     delay(1000)
                 }
@@ -246,6 +252,10 @@ object CacheBook {
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
         }
 
+        /*
+        当服务成功拉取到目录存入数据库，并计算好需要下载哪些章节后，
+        会调用 addDownload 将具体的章节编号放入待下载队列中，此时同步将 isLoading = false
+         */
         @Synchronized
         fun addDownload(start: Int, end: Int) {
             isStopped = false
@@ -316,12 +326,18 @@ object CacheBook {
         @Synchronized
         fun download(scope: CoroutineScope, context: CoroutineContext) {
             val chapterIndex = waitDownloadSet.firstOrNull()
+            /*
+            如果没有取到（chapterIndex == null），说明当前待下载队列为空。
+            此时如果这本书没有在加载章节列表isLoading==false，并且也没有正在下载的章节（onDownloadSet.isEmpty()），那么说明整本书的下载任务已完成，将其从全局的缓存任务池 cacheBookMap 中移除，结束方法。
+            */
             if (chapterIndex == null) {
                 if (!isLoading && onDownloadSet.isEmpty()) {
                     cacheBookMap.remove(book.bookUrl)
                 }
                 return
             }
+
+            //去重保护：如果这个章节已经在正在下载集合 (onDownloadSet) 中，说明由于某种原因重复触发了，直接将其从待下载集合中剔除并忽略。
             if (onDownloadSet.contains(chapterIndex)) {
                 waitDownloadSet.remove(chapterIndex)
                 return
@@ -330,18 +346,25 @@ object CacheBook {
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
+            //过滤分卷
             if (chapter.isVolume) {
                 /** 修正下载计数 */
                 postEvent(EventBus.SAVE_CONTENT, Pair(book, chapter))
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
+
+            //过滤图片章节：如果判断出该章节是已处理过的图片类型（hasImageContent），则跳过下载。
             if (BookHelp.hasImageContent(book, chapter)) {
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
+
+            //经过上述校验，确认需要处理，正式将该章节从“待下载”移入“正在下载”队列。
             waitDownloadSet.remove(chapterIndex)
             onDownloadSet.add(chapterIndex)
+            
+            //分支一：本地已有正文，仅下载/处理图片
             if (BookHelp.hasContent(book, chapter)) {
                 Coroutine.async(scope, context, start = CoroutineStart.LAZY, executeContext = context) {
                     BookHelp.getContent(book, chapter)?.let {
@@ -364,6 +387,8 @@ object CacheBook {
                 }
                 return
             }
+
+            //分支二：本地无正文，发起网络请求下载
             WebBook.getContent(
                 scope,
                 bookSource,
