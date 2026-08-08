@@ -249,7 +249,7 @@ object CacheBook {
             tasks.clear()
             isStopped = true
             isLoading = false
-            postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+            onFinally()
         }
 
         /*
@@ -266,7 +266,7 @@ object CacheBook {
             }
             cacheBookMap[book.bookUrl] = this
             isLoading = false
-            postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+            onFinally()
         }
 
         @Synchronized
@@ -312,9 +312,15 @@ object CacheBook {
             if (!isStopped) waitDownloadSet.add(index)
         }
 
+        /**
+         * 统一的清理与状态同步出口
+         * 当待下载集合和正在下载集合均为空时，说明该书的全部下载任务（或同步跳过的任务）均已完成。
+         * 此时需要确保将其从全局的缓存任务池 cacheBookMap 中移除，否则会导致 CacheBookService 无法停止，出现通知卡在“正在下载0，等待中0”的Bug。
+         * 加入 !isLoading 校验，是为了防止在第一次获取目录期间（isLoading = true）被误清理。
+         */
         @Synchronized
-        private fun onFinally() {
-            if (waitDownloadSet.isEmpty() && onDownloadSet.isEmpty()) {
+        fun onFinally() {
+            if (!isLoading && waitDownloadSet.isEmpty() && onDownloadSet.isEmpty()) {
                 cacheBookMap.remove(book.bookUrl)
             }
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
@@ -331,19 +337,19 @@ object CacheBook {
             此时如果这本书没有在加载章节列表isLoading==false，并且也没有正在下载的章节（onDownloadSet.isEmpty()），那么说明整本书的下载任务已完成，将其从全局的缓存任务池 cacheBookMap 中移除，结束方法。
             */
             if (chapterIndex == null) {
-                if (!isLoading && onDownloadSet.isEmpty()) {
-                    cacheBookMap.remove(book.bookUrl)
-                }
+                onFinally()
                 return
             }
 
             //去重保护：如果这个章节已经在正在下载集合 (onDownloadSet) 中，说明由于某种原因重复触发了，直接将其从待下载集合中剔除并忽略。
             if (onDownloadSet.contains(chapterIndex)) {
                 waitDownloadSet.remove(chapterIndex)
+                onFinally()
                 return
             }
             val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: let {
                 waitDownloadSet.remove(chapterIndex)
+                onFinally()
                 return
             }
             //过滤分卷
@@ -351,12 +357,14 @@ object CacheBook {
                 /** 修正下载计数 */
                 postEvent(EventBus.SAVE_CONTENT, Pair(book, chapter))
                 waitDownloadSet.remove(chapterIndex)
+                onFinally()
                 return
             }
 
             //过滤图片章节：如果判断出该章节是已处理过的图片类型（hasImageContent），则跳过下载。
             if (BookHelp.hasImageContent(book, chapter)) {
                 waitDownloadSet.remove(chapterIndex)
+                onFinally()
                 return
             }
 
@@ -435,7 +443,7 @@ object CacheBook {
                     (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
                 return "获取正文失败\n${e.localizedMessage}"
             } finally {
-                postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+                onFinally()
             }
         }
 
@@ -473,7 +481,7 @@ object CacheBook {
                 onCancel(chapter.index)
                 downloadFinish(chapter, "download canceled", resetPageOffset, true)
             }.onFinally {
-                postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+                onFinally()
             }.start()
         }
 
