@@ -7,6 +7,7 @@ import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.databinding.DialogUpdateBinding
 import io.legado.app.help.update.AppUpdate
+import io.legado.app.help.update.GithubMirrorHelper
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.Download
 import io.legado.app.utils.setLayout
@@ -59,7 +60,10 @@ class UpdateDialog() : BaseDialogFragment(R.layout.dialog_update) {
                     val url = arguments?.getString("url")
                     val name = arguments?.getString("name")
                     if (url != null && name != null) {
-                        Download.start(requireContext(), url, name)
+                        // 生成包含原始 URL 和镜像 URL 的完整列表，
+                        // 传给 DownloadService 用于下载失败时自动切换镜像重试
+                        val allUrls = GithubMirrorHelper.getAllDownloadUrls(url)
+                        Download.start(requireContext(), url, name, allUrls)
                         toastOnUi(R.string.download_start)
                     }
                 }

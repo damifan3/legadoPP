@@ -57,6 +57,9 @@ android {
 
         buildConfigField "String", "Cronet_Version", "\"$CronetVersion\""
         buildConfigField "String", "Cronet_Main_Version", "\"$CronetMainVersion\""
+        
+        def isBeta = project.hasProperty('isBetaBuild') ? project.property('isBetaBuild') : "true"
+        buildConfigField "boolean", "IS_BETA_BUILD", isBeta
 
         javaCompileOptions {
             annotationProcessorOptions {

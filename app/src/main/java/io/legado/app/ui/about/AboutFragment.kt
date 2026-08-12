@@ -9,12 +9,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import io.legado.app.R
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.constant.AppLog
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.update.AppUpdate
+import io.legado.app.help.update.AppVariant
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.FileDoc
@@ -44,8 +46,14 @@ class AboutFragment : PreferenceFragmentCompat() {
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         addPreferencesFromResource(R.xml.about)
+        // 根据是否为测试版判断是否加 beta 标签，正式版不加后缀
+        val variantSuffix = if (AppConst.isBetaBuild) {
+            " ${getString(R.string.version_beta)}"
+        } else {
+            ""
+        }
         findPreference<Preference>("update_log")?.summary =
-            "${getString(R.string.version)} ${appInfo.versionName}"
+            "${getString(R.string.version)} ${appInfo.versionName}$variantSuffix"
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -88,7 +96,8 @@ class AboutFragment : PreferenceFragmentCompat() {
      */
     private fun checkUpdate() {
         waitDialog.show()
-        AppUpdate.giteeUpdate.run {
+        // 使用 GitHub 更新源检查更新（已从 Gitee 切换为 GitHub damifan3/legadoPP）
+        AppUpdate.gitHubUpdate.run {
             check(lifecycleScope)
                 .onSuccess {
                     showDialogFragment(

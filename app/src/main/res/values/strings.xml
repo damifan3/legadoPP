@@ -1254,10 +1254,10 @@
     <string name="update_to_variant_title">检查更新查找版本</string>
     <string name="update_to_variant_summary">切换正式版/测试版</string>
     <string name="default_version">当前</string>
-    <string name="official_version">正式版</string>
     <string name="beta_release_version">测试版</string>
     <string name="beta_releaseA_version">共存版</string>
-    <string name="beta_releaseS_version" translatable="false">正式版</string>
+    <!-- 正式版，原名beta_releaseS_version -->
+    <string name="release_version">正式版</string>
     <string name="stream_read_aloud_audio">流式播放音频</string>
     <string name="stream_read_aloud_audio_summary">即边下边播，网络不好时播放会断断续续，仅TTS源有效</string>
     <string name="pause_read_aloud_while_phone_calls_title">来电期间暂停朗读</string>
@@ -1365,12 +1365,13 @@
     <string name="video_setting">视频设置</string>
     <string name="video_setting_summary">自动播放、全屏播放等配置</string>
     <string name="history">历史记录</string>
-    <string name="app_name_sigma">阅读Sigma</string>
-    <string name="about_description_sigma">\u3000\u3000阅读Sigma继承自legado，旨在原版基础上完善和增加功能，欢迎您的加入。</string>
-    <string name="contributors_summary_sigma">gedoor、Luoyacheng、Horis和 Xwite 等，详情请在 GitHub 中查看</string>
-    <string name="app_share_description_sigma">
-        阅读 Sigma 下载地址：\nhttps://github.com/Luoyacheng/legado/releases
+    <!-- Legado·PP brand strings (English defaults; Chinese overrides in values-zh) -->
+    <string name="about_description_pp">\u3000\u3000Legado Sigma is a fork of Legado, and LegadoPP is in turn a fork of Legado Sigma, adding more features and fixing issues on top of it. Feel free to submit an issue!</string>
+    <string name="contributors_summary_pp">gedoor, Luoyacheng, damifan3, et al. See GitHub for details</string>
+    <string name="app_share_description_pp">
+        Legado·PP download:\nhttps://github.com/damifan3/legadoPP/releases
     </string>
+    <!-- 测试版标签，正式版不显示后缀 / Beta label, not shown for official builds -->
     <string name="sure_cache_book">是否确认开始缓存？</string>
     <string name="non_printable_set">不可视字符设定</string>
     <string name="whitespace_leading">行首</string>

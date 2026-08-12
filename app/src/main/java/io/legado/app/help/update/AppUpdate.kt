@@ -5,9 +5,13 @@ import kotlinx.coroutines.CoroutineScope
 
 object AppUpdate {
 
-    val gitHubUpdate: AppUpdateInterface? by lazy {
+    // 主更新源：GitHub（damifan3/legadoPP）
+    val gitHubUpdate: AppUpdateInterface by lazy {
         AppUpdateGitHub
     }
+
+    // Gitee 更新源已弃用，保留兼容但不再使用
+    @Deprecated("已切换到 GitHub 更新源，不再使用 Gitee")
     val giteeUpdate: AppUpdateInterface by lazy {
         AppUpdateGitee
     }

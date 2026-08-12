@@ -67,13 +67,14 @@ object AppConst {
             ?.let {
                 appInfo.versionName = it.versionName!!
                 appInfo.appVariant = when {
-                    it.packageName.contains("releaseA") -> AppVariant.BETA_RELEASEA
-                    it.packageName.contains("releaseS") -> AppVariant.BETA_RELEASES
-                    isBeta -> AppVariant.BETA_RELEASE
-                    isOfficial -> AppVariant.OFFICIAL
+                    it.packageName.contains("releaseA") -> AppVariant.RELEASEA
+                    it.packageName.contains("releaseS") -> AppVariant.RELEASES
+                    it.packageName.contains("releasePP") -> AppVariant.RELEASEPP
+                    it.packageName.contains("release") -> AppVariant.RELEASE
                     else -> AppVariant.UNKNOWN
                 }
 
+                // 科学动态读取应用版本号
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     appInfo.versionCode = it.longVersionCode
                 } else {
@@ -84,16 +85,7 @@ object AppConst {
         appInfo
     }
 
-    @Suppress("DEPRECATION")
-    private val sha256Signature: String by lazy {
-        val packageInfo =
-            appCtx.packageManager.getPackageInfo(appCtx.packageName, PackageManager.GET_SIGNATURES)
-        DigestUtil.sha256Hex(packageInfo.signatures!![0].toByteArray()).uppercase()
-    }
-
-    private val isOfficial = sha256Signature == OFFICIAL_SIGNATURE
-
-    private val isBeta = sha256Signature == BETA_SIGNATURE || BuildConfig.DEBUG
+    val isBetaBuild = BuildConfig.IS_BETA_BUILD || BuildConfig.DEBUG
 
     val charsets =
         arrayListOf("UTF-8", "GB2312", "GB18030", "GBK", "Unicode", "UTF-16", "UTF-16LE", "ASCII")

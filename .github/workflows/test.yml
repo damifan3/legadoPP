@@ -179,6 +179,20 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Prepend Beta Changelog
+        if: needs.prepare.outputs.updateLog_updated != 'yes'
+        run: |
+          echo "将Beta日志追加到updateLog.md头部"
+          BETA_LOG=$(echo '${{ needs.prepare.outputs.updateLog_content }}' | jq -r .)
+          CURRENT_DATE=$(date -d "8 hour" -u +"%Y-%m-%d %H:%M")
+          HEADER="## Beta版更新 ($CURRENT_DATE)"
+          TEMP_FILE=$(mktemp)
+          echo "$HEADER" > $TEMP_FILE
+          echo "$BETA_LOG" >> $TEMP_FILE
+          echo "" >> $TEMP_FILE
+          cat $GITHUB_WORKSPACE/app/src/main/assets/updateLog.md >> $TEMP_FILE
+          mv $TEMP_FILE $GITHUB_WORKSPACE/app/src/main/assets/updateLog.md
+
       - name: Build With Gradle
         continue-on-error: true
         run: |
@@ -199,7 +213,12 @@ jobs:
           sed "/def version/c def version = \"${{ env.VERSION }}\"" $GITHUB_WORKSPACE/app/build.gradle  -i
           echo "开始${{ env.product }}$typeName构建"
           chmod +x gradlew
-          ./gradlew assemble${{ env.product }}release --build-cache --parallel --daemon --warning-mode all
+          if [ "${{ needs.prepare.outputs.updateLog_updated }}" == "yes" ]; then
+            BETA_FLAG="false"
+          else
+            BETA_FLAG="true"
+          fi
+          ./gradlew assemble${{ env.product }}release -PisBetaBuild=$BETA_FLAG --build-cache --parallel --daemon --warning-mode all
           echo "修改APK文件名"
           mkdir -p ${{ github.workspace }}/apk/
           for file in `ls ${{ github.workspace }}/app/build/outputs/apk/*/*/*.apk`; do

@@ -234,7 +234,8 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         if (LocalConfig.versionCode == appInfo.versionCode) {
             if (AppConfig.autoUpdateVariant) {
                 if (LocalConfig.lastCheckUpdate + 24.hours.inWholeMilliseconds < System.currentTimeMillis()) {
-                    AppUpdate.giteeUpdate.check(lifecycleScope)
+                    // 使用 GitHub 更新源（damifan3/legadoPP）检查新版本
+                    AppUpdate.gitHubUpdate.check(lifecycleScope)
                         .onSuccess {
                             showDialogFragment(
                                 UpdateDialog(it)

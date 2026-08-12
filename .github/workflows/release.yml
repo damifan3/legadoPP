@@ -73,7 +73,7 @@ jobs:
         run: |
           echo "开始进行${{ env.product }}构建"
           chmod +x gradlew
-          ./gradlew assemble${{ env.product }}release --build-cache --parallel --daemon --warning-mode all
+          ./gradlew assemble${{ env.product }}release -PisBetaBuild=false --build-cache --parallel --daemon --warning-mode all
 
       - name: Organize the Files
         run: |

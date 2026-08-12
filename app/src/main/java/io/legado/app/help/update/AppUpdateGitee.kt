@@ -17,21 +17,24 @@ import kotlinx.coroutines.CoroutineScope
 @Suppress("unused")
 object AppUpdateGitee : AppUpdate.AppUpdateInterface {
 
-    private val checkVariant: AppVariant
+    private val checkIsBetaChannel: Boolean
         get() = when (AppConfig.updateToVariant) {
-            "official_version" -> AppVariant.OFFICIAL
-            "beta_release_version" -> AppVariant.BETA_RELEASE
-            "beta_releaseA_version" -> AppVariant.BETA_RELEASEA
-            "beta_releaseS_version" -> AppVariant.BETA_RELEASES
-            else -> AppConst.appInfo.appVariant
+            "beta_release_version" -> true // 强制测试版通道
+            "release_version" -> false // 强制正式版通道
+            else -> AppConst.isBetaBuild
         }
 
+    private val checkVariant: AppVariant
+        get() = AppConst.appInfo.appVariant
+
     private suspend fun getLatestRelease(): List<AppReleaseInfo> {
-        val lastReleaseUrl = if (checkVariant.isBeta()) {
+        val isBeta = checkIsBetaChannel
+        val lastReleaseUrl = if (isBeta) {
             "https://gitee.com/api/v5/repos/lyc486/legado/releases/latest"
         } else {
             "https://gitee.com/api/v5/repos/lyc486/legado/releases?page=1&per_page=3&direction=desc"
         }
+        io.legado.app.constant.AppLog.put("GiteeUpdate: checking URL: $lastReleaseUrl, isBetaChannel: $isBeta, variant: $checkVariant")
         val res = okHttpClient.newCallResponse {
             url(lastReleaseUrl)
         }
@@ -42,7 +45,7 @@ object AppUpdateGitee : AppUpdate.AppUpdateInterface {
         if (body.isBlank()) {
             throw NoStackTraceException("获取新版本出错")
         }
-        if (!checkVariant.isBeta()) {
+        if (!isBeta) {
             return GSON.fromJsonArray<GiteeRelease>(body)
                 .getOrElse {
                     throw NoStackTraceException("获取新版本出错 " + it.localizedMessage)
@@ -64,13 +67,7 @@ object AppUpdateGitee : AppUpdate.AppUpdateInterface {
     ): Coroutine<AppUpdate.UpdateInfo> {
         return Coroutine.async(scope) {
             getLatestRelease()
-                .filter {
-                    if (AppConst.appInfo.appVariant == AppVariant.BETA_RELEASE) { //不切版本
-                        it.appVariant == AppConst.appInfo.appVariant
-                    } else {
-                        it.appVariant == checkVariant
-                    }
-                }
+                .filter { it.appVariant == checkVariant }
                 .firstOrNull { it.versionName > AppConst.appInfo.versionName }
                 ?.let {
                     return@async AppUpdate.UpdateInfo(

@@ -18,15 +18,11 @@ data class AppReleaseInfo(
 
 enum class AppVariant {
     OFFICIAL,
-    BETA_RELEASEA,
-    BETA_RELEASES,
-    BETA_RELEASE,
-    UNKNOWN;
-
-    fun isBeta(): Boolean {
-        return this == BETA_RELEASE || this == BETA_RELEASEA
-    }
-
+    RELEASEA,
+    RELEASES,
+    RELEASEPP,
+    RELEASE,
+    UNKNOWN
 }
 
 @Keep
@@ -38,6 +34,7 @@ data class GithubRelease(
 ) {
     fun gitReleaseToAppReleaseInfo(): List<AppReleaseInfo> {
         assets ?: throw NoStackTraceException("获取新版本出错")
+        // assets是List<Asset>，返回的是 List<AppReleaseInfo>
         return assets
             .filter { it.isValid }
             .map { it.assetToAppReleaseInfo(isPreRelease, body) }
@@ -81,10 +78,11 @@ data class Asset(
         val timestamp: Long = instant.toEpochMilli()
 
         val appVariant = when {
-            preRelease && name.contains("releaseA") -> AppVariant.BETA_RELEASEA
-            preRelease && name.contains("releaseS") -> AppVariant.BETA_RELEASES
-            preRelease && name.contains("release") -> AppVariant.BETA_RELEASE
-            else -> AppVariant.OFFICIAL
+            name.contains("releaseA") -> AppVariant.RELEASEA
+            name.contains("releaseS") -> AppVariant.RELEASES
+            name.contains("releasePP") -> AppVariant.RELEASEPP
+            name.contains("release") -> AppVariant.RELEASE
+            else -> AppVariant.UNKNOWN
         }
 
         return AppReleaseInfo(appVariant, timestamp, note, name, apkUrl, url)
@@ -104,10 +102,11 @@ data class GiteeAsset(
     fun assetToAppReleaseInfo(preRelease: Boolean, note: String): AppReleaseInfo {
 
         val appVariant = when {
-            name.contains("releaseA") -> AppVariant.BETA_RELEASEA
-            name.contains("releaseS") -> AppVariant.BETA_RELEASES
-            name.contains("release") -> AppVariant.BETA_RELEASE //preRelease &&
-            else -> AppVariant.OFFICIAL
+            name.contains("releaseA") -> AppVariant.RELEASEA
+            name.contains("releaseS") -> AppVariant.RELEASES
+            name.contains("releasePP") -> AppVariant.RELEASEPP
+            name.contains("release") -> AppVariant.RELEASE
+            else -> AppVariant.UNKNOWN
         }
 
         return AppReleaseInfo(appVariant, 0, note, name, apkUrl, "")

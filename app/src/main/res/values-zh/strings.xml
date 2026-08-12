@@ -1184,7 +1184,7 @@
     <string name="update_to_variant_title">检查更新查找版本</string>
     <string name="update_to_variant_summary">切换正式版/测试版</string>
     <string name="default_version">当前</string>
-    <string name="official_version">正式版</string>
+    <string name="release_version">正式版</string>
     <string name="beta_release_version">测试版</string>
     <string name="beta_releaseA_version">共存版</string>
     <string name="stream_read_aloud_audio">流式播放音频</string>
@@ -1302,4 +1302,11 @@
     <string name="auto_task_purchase_no_action">书源未配置购买规则</string>
     <string name="auto_task_purchase_no_unpaid">无需购买的章节</string>
     <string name="cache_summary">已缓存: %1$d 章 / 未缓存: %2$d 章</string>
+
+    <!-- 阅读·PP 品牌相关字符串（中文覆盖） -->
+    <string name="about_description_pp">\u3000\u3000阅读 Sigma 继承自 Legado，阅读·PP 又是阅读 Sigma 的一个 fork，在其基础上新增更多功能和修复问题。欢迎您提出 issue！</string>
+    <string name="contributors_summary_pp">gedoor、Luoyacheng、damifan3 等，详情请在 GitHub 中查看</string>
+    <string name="app_share_description_pp">
+        阅读·PP 下载地址：\nhttps://github.com/damifan3/legadoPP/releases
+    </string>
 </resources>

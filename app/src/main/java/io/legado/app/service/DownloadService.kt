@@ -36,6 +36,8 @@ class DownloadService : BaseService() {
     private val groupKey = "${appCtx.packageName}.download"
     private val downloads = hashMapOf<Long, DownloadInfo>()
     private val completeDownloads = hashSetOf<Long>()
+    // 记录正在重试的下载任务，避免重复重试
+    private val retryingDownloads = hashSetOf<Long>()
     private var upStateJob: Job? = null
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -63,7 +65,9 @@ class DownloadService : BaseService() {
         when (intent?.action) {
             IntentAction.start -> startDownload(
                 intent.getStringExtra("url"),
-                intent.getStringExtra("fileName")
+                intent.getStringExtra("fileName"),
+                // 接收镜像 URL 列表，用于下载失败时自动重试
+                intent.getStringArrayListExtra("mirrorUrls")
             )
 
             IntentAction.play -> {
@@ -85,9 +89,19 @@ class DownloadService : BaseService() {
 
     /**
      * 开始下载
+     *
+     * @param url 下载地址
+     * @param fileName 文件名
+     * @param mirrorUrls 可选的镜像 URL 列表，用于 GitHub 下载失败时自动重试
+     * @param currentMirrorIndex 当前使用的镜像索引，用于重试时追踪进度
      */
     @Synchronized
-    private fun startDownload(url: String?, fileName: String?) {
+    private fun startDownload(
+        url: String?,
+        fileName: String?,
+        mirrorUrls: ArrayList<String>? = null,
+        currentMirrorIndex: Int = 0
+    ) {
         if (url == null || fileName == null) {
             if (downloads.isEmpty()) {
                 stopSelf()
@@ -108,7 +122,13 @@ class DownloadService : BaseService() {
             // 添加一个下载任务
             val downloadId = downloadManager.enqueue(request)
             downloads[downloadId] =
-                DownloadInfo(url, fileName, NotificationId.Download + downloads.size)
+                DownloadInfo(
+                    url, fileName, NotificationId.Download + downloads.size,
+                    mirrorUrls = mirrorUrls,
+                    currentMirrorIndex = currentMirrorIndex
+                )
+
+            //查询下载进度 包含重试调用
             queryState()
             if (upStateJob == null) {
                 checkDownloadState()
@@ -160,7 +180,7 @@ class DownloadService : BaseService() {
     }
 
     /**
-     * 查询下载进度
+     * 查询下载进度，更新通知栏
      */
     @Synchronized
     private fun queryState() {
@@ -191,7 +211,11 @@ class DownloadService : BaseService() {
                             getString(R.string.download_success)
                         }
 
-                        DownloadManager.STATUS_FAILED -> getString(R.string.download_error)
+                        DownloadManager.STATUS_FAILED -> {
+                            // 下载失败时，尝试使用镜像 URL 自动重试
+                            retryWithMirror(id)
+                            getString(R.string.download_error)
+                        }
                         else -> getString(R.string.unknown_state)
                     }
                     downloads[id]?.let { downloadInfo ->
@@ -269,11 +293,59 @@ class DownloadService : BaseService() {
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
+    /**
+     * 镜像重试下载
+     *
+     * 当下载失败时，检查是否有可用的镜像 URL，
+     * 如果有则自动移除失败的下载任务并使用下一个镜像 URL 重新发起下载。
+     * 所有镜像都尝试失败后提示用户。
+     *
+     * @param downloadId 失败的下载任务 ID
+     */
+    @Synchronized
+    private fun retryWithMirror(downloadId: Long) {
+        // 防止同一个下载任务重复触发重试
+        if (retryingDownloads.contains(downloadId)) return
+        val info = downloads[downloadId] ?: return
+        val mirrorUrls = info.mirrorUrls ?: return
+        //下载 index ++
+        val nextIndex = info.currentMirrorIndex + 1
+        if (nextIndex < mirrorUrls.size) {
+            // 标记为正在重试，避免 queryState 轮询时重复触发
+            retryingDownloads.add(downloadId)
+            val nextUrl = mirrorUrls[nextIndex]
+            AppLog.put("下载失败，正在通过镜像重试 (${nextIndex}/${mirrorUrls.size - 1}): $nextUrl")
+            toastOnUi("正在通过镜像重试下载...")
+            // 移除失败的下载任务
+            downloadManager.remove(downloadId)
+            downloads.remove(downloadId)
+            retryingDownloads.remove(downloadId)
+            // 使用下一个镜像 URL 重新发起下载
+            startDownload(nextUrl, info.fileName, mirrorUrls, nextIndex)
+        } else {
+            // 所有镜像都失败了
+            AppLog.put("所有下载源均失败，共尝试 ${mirrorUrls.size} 个源")
+            toastOnUi("所有下载源均失败")
+        }
+    }
+
+    /**
+     * 下载任务信息
+     *
+     * @param url 当前下载 URL
+     * @param fileName 下载文件名
+     * @param notificationId 通知 ID
+     * @param startTime 下载开始时间
+     * @param mirrorUrls GitHub 镜像 URL 列表（包含原始 URL），用于失败重试
+     * @param currentMirrorIndex 当前使用的镜像索引
+     */
     private data class DownloadInfo(
         val url: String,
         val fileName: String,
         val notificationId: Int,
-        val startTime: Long = System.currentTimeMillis()
+        val startTime: Long = System.currentTimeMillis(),
+        val mirrorUrls: ArrayList<String>? = null,
+        val currentMirrorIndex: Int = 0
     )
 
 }

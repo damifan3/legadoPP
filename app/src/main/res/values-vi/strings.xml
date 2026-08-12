@@ -1168,9 +1168,9 @@
     <string name="start_chapter">Chương bắt đầu</string>
     <string name="update_to_variant_title">Kiểm tra cập nhật tìm phiên bản</string>
     <string name="update_to_variant_summary">Kiểm tra cập nhật khi tìm các phiên bản có chữ ký khác</string>
-    <string name="default_version">Hiện tại</string>
-    <string name="official_version">Phiên bản chính thức</string>
-    <string name="beta_release_version">Phiên bản beta</string>
+    <string name="default_version">Phiên bản hiện tại</string>
+    <string name="release_version">Phiên bản chính thức</string>
+    <string name="beta_release_version">Phiên bản thử nghiệm</string>
     <string name="beta_releaseA_version">Phiên bản song song</string>
     <string name="stream_read_aloud_audio">Phát âm thanh trực tuyến</string>
     <string name="stream_read_aloud_audio_summary">Tức là vừa tải vừa phát, khi mạng kém thì phát sẽ bị gián đoạn, chỉ có nguồn TTS mới có hiệu lực</string>
