@@ -309,7 +309,7 @@ jobs:
       - name: Delete All Previous Beta Releases
         if: needs.prepare.outputs.updateLog_updated == 'yes'
         run: |
-          BETA_TAGS=$(gh release list --limit 1000 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease and (.tagName | startswith("beta"))) | .tagName')
+          BETA_TAGS=$(gh release list --limit 1000 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease and ((.tagName | startswith("beta")) or (.tagName | startswith("archive-beta")))) | .tagName')
           for tag in $BETA_TAGS; do
             if [ -n "$tag" ]; then
               echo "Deleting beta release and tag: $tag"
@@ -337,7 +337,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: legado_app_beta_${{ env.VERSION }}
-          tag_name: beta-${{ env.VERSION }}
+          tag_name: archive-beta-${{ env.VERSION }}
           body: |
             ### 更新内容
             ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
@@ -355,10 +355,9 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           
-          # GitHub Releases 页面默认按 Commit 时间倒序排列。
-          # 当多个 tag 指向同一个 Commit 时，会按 tag 名称的字母倒序排列，导致 beta-xxx 排在 beta 前面。
-          # 创建一个空的 Commit 并将其时间设为 2038 年，从而彻底保证 beta 永远排在最前面。
-          GIT_AUTHOR_DATE="2038-01-01T00:00:00Z" GIT_COMMITTER_DATE="2038-01-01T00:00:00Z" git commit --allow-empty -m "Release beta"
+          # GitHub Releases 页面如果遇到类似版本的 tag，会强制使用 SemVer（语义化版本）或字母顺序降序排列。
+          # 因为 "beta-xxx" 的字母顺序/版本号大于 "beta"，所以无论时间怎么改，"beta" 都会被排在下面。
+          # 现在的解决方案是：将历史版本的 tag 改为 "archive-beta-xxx"（a 比 b 小），从而保证 "beta" 永远在最上面。
           git tag -a beta -m "Latest Beta Release"
           git push -f origin beta
         env:
