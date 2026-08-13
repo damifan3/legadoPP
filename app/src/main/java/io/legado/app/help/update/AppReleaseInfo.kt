@@ -13,7 +13,7 @@ data class AppReleaseInfo(
     val downloadUrl: String,
     val assetUrl: String
 ) {
-    val versionName: String = name.split("_").getOrNull(2)?.dropLast(2) ?: ""
+    val versionName: String = Regex("""\d+\.\d+\.\d+""").find(name)?.value ?: ""
 }
 
 enum class AppVariant {
@@ -30,14 +30,14 @@ data class GithubRelease(
     val assets: List<Asset>?,
     val body: String,
     @SerializedName("prerelease")
-    val isPreRelease: Boolean,
+    val prerelease: Boolean,
 ) {
     fun gitReleaseToAppReleaseInfo(): List<AppReleaseInfo> {
         assets ?: throw NoStackTraceException("获取新版本出错")
         // assets是List<Asset>，返回的是 List<AppReleaseInfo>
         return assets
             .filter { it.isValid }
-            .map { it.assetToAppReleaseInfo(isPreRelease, body) }
+            .map { it.assetToAppReleaseInfo(prerelease, body) }
     }
 }
 @Keep

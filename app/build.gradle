@@ -16,7 +16,8 @@ plugins {
 apply from: 'download.gradle'
 
 static def releaseTime() {
-    return new Date().format("yy.MMddHH", TimeZone.getTimeZone("GMT+8"))
+    // 将版本号格式精确到分钟(yy.MMddHHmm)，确保同一小时内的多次GitHub Action构建能够被正确识别为新版本
+    return new Date().format("yy.MMddHHmm", TimeZone.getTimeZone("GMT+8"))
 }
 
 def name = "legado"

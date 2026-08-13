@@ -52,21 +52,25 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
                     url(url)
                 }
                 if (!res.isSuccessful) {
+                    io.legado.app.constant.AppLog.put("GitHubUpdate: 请求失败 (${res.code}) - $url")
                     throw NoStackTraceException("获取新版本出错(${res.code})")
                 }
                 val body = res.body.text()
                 if (body.isBlank()) {
+                    io.legado.app.constant.AppLog.put("GitHubUpdate: 请求返回空数据 - $url")
                     throw NoStackTraceException("获取新版本出错")
                 }
 
                 //GSON 库自动将构造 GithubRelease 所需的参数传入并返回构造好的对象
                 return GSON.fromJsonObject<GithubRelease>(body)
                     .getOrElse {
+                        io.legado.app.constant.AppLog.put("GitHubUpdate: JSON解析失败: ${it.localizedMessage} - $url")
                         throw NoStackTraceException("获取新版本出错 " + it.localizedMessage)
                     }
                     .gitReleaseToAppReleaseInfo()
                     .sortedByDescending { it.createdAt }
             } catch (e: Exception) {
+                io.legado.app.constant.AppLog.put("GitHubUpdate: 请求异常: ${e.localizedMessage} - $url")
                 lastException = e
                 // 如果当前 URL 失败，继续尝试下一个镜像
                 continue
@@ -81,18 +85,28 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         scope: CoroutineScope,
     ): Coroutine<AppUpdate.UpdateInfo> {
         return Coroutine.async(scope) {
-            getLatestRelease()
+            val releases = getLatestRelease()
+            io.legado.app.constant.AppLog.put("GitHubUpdate: 成功获取到 ${releases.size} 个 releases，当前版本: ${AppConst.appInfo.versionName}, variant: $checkVariant")
+            releases.forEach {
+                io.legado.app.constant.AppLog.put("GitHubUpdate: 获取到版本 -> versionName: ${it.versionName}, variant: ${it.appVariant}")
+            }
+            
+            val latest = releases
                 .filter { it.appVariant == checkVariant }
                 .firstOrNull { it.versionName > AppConst.appInfo.versionName }
-                ?.let {
-                    return@async AppUpdate.UpdateInfo(
-                        it.versionName,
-                        it.note,
-                        it.downloadUrl,
-                        it.name
-                    )
-                }
-                ?: throw NoStackTraceException("已是最新版本")
+                
+            if (latest != null) {
+                io.legado.app.constant.AppLog.put("GitHubUpdate: 发现新版本: ${latest.versionName}")
+                return@async AppUpdate.UpdateInfo(
+                    latest.versionName,
+                    latest.note,
+                    latest.downloadUrl,
+                    latest.name
+                )
+            } else {
+                io.legado.app.constant.AppLog.put("GitHubUpdate: 未发现更新的版本")
+                throw NoStackTraceException("已是最新版本")
+            }
             //时间不能太短，否则来不及尝试所有 url
         }.timeout(30000)
     }

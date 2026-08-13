@@ -210,7 +210,7 @@ jobs:
             sed -i "s/applicationIdSuffix.*/applicationIdSuffix '.releaseA'/" $GITHUB_WORKSPACE/app/build.gradle
           fi
           echo "统一版本号"
-          sed "/def version/c def version = \"${{ env.VERSION }}\"" $GITHUB_WORKSPACE/app/build.gradle  -i
+          sed "/def version/c def version = \"${{ env.VERSIONL }}\"" $GITHUB_WORKSPACE/app/build.gradle  -i
           echo "开始${{ env.product }}$typeName构建"
           chmod +x gradlew
           if [ "${{ needs.prepare.outputs.updateLog_updated }}" == "yes" ]; then
@@ -306,6 +306,19 @@ jobs:
             fi
           done
 
+      - name: Delete All Previous Beta Releases
+        if: needs.prepare.outputs.updateLog_updated == 'yes'
+        run: |
+          BETA_TAGS=$(gh release list --limit 1000 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease and (.tagName | startswith("beta"))) | .tagName')
+          for tag in $BETA_TAGS; do
+            if [ -n "$tag" ]; then
+              echo "Deleting beta release and tag: $tag"
+              gh release delete "$tag" -y --cleanup-tag || true
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Publish Official Release
         if: needs.prepare.outputs.updateLog_updated == 'yes'
         uses: softprops/action-gh-release@v2
@@ -319,28 +332,33 @@ jobs:
           files: ${{ github.workspace }}/apk/*.apk
           fail_on_unmatched_files: true
 
-      - name: Delete Pre-Release
+      - name: Publish Pre-Release (History)
+        if: needs.prepare.outputs.updateLog_updated != 'yes'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: legado_app_beta_${{ env.VERSION }}
+          tag_name: beta-${{ env.VERSION }}
+          body: |
+            ### 更新内容
+            ${{ fromJSON(needs.prepare.outputs.updateLog_content) }}
+          prerelease: true
+          files: ${{ github.workspace }}/apk/*.apk
+          fail_on_unmatched_files: true
+
+      - name: Delete Old Latest Pre-Release
         if: needs.prepare.outputs.updateLog_updated != 'yes'
         run: |
           if gh release view beta &>/dev/null; then
-            gh release delete beta -y
+            gh release delete beta -y --cleanup-tag
           fi
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Create or update beta tag
-        if: needs.prepare.outputs.updateLog_updated != 'yes'
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: beta
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish Pre-Release
+      - name: Publish Latest Pre-Release (For App Check)
         if: needs.prepare.outputs.updateLog_updated != 'yes'
         uses: softprops/action-gh-release@v2
         with:
-          name: legado_app_${{ env.VERSION }}
+          name: legado_app_beta_${{ env.VERSION }}
           tag_name: beta
           body: |
             ### 更新内容
@@ -453,88 +471,104 @@ jobs:
           API_BASE="https://gitee.com/api/v5/repos/$GITEE_USER/$GITEE_REPO"
           AUTH_HEADER="Authorization: token $GITEE_TOKEN"
 
-          # 根据条件设置标签和发布类型
+          # 根据条件设置需要发布的标签列表
           if [ "$UPDATE_UPDATED" = "yes" ]; then
-            TAG_NAME="$VERSION"
-            PRERELEASE="false"
-            RELEASE_NAME="legado_app_$VERSION"
-            echo "🚀 发布正式版: $TAG_NAME"
+            TAGS_TO_PUBLISH=("$VERSION")
+            RELEASE_NAMES=("legado_app_$VERSION")
+            PRERELEASES=("false")
+            echo "🚀 发布正式版"
           else
-            TAG_NAME="beta"
-            PRERELEASE="true"
-            RELEASE_NAME="legado_app_$VERSION"
-            echo "🧪 发布预发布版: $TAG_NAME"
+            TAGS_TO_PUBLISH=("beta-$VERSION" "beta")
+            RELEASE_NAMES=("legado_app_beta_$VERSION" "legado_app_beta_$VERSION")
+            PRERELEASES=("true" "true")
+            echo "🧪 发布预发布版"
           fi
 
           # 删除旧Release
-          if [ "$TAG_NAME" = "beta" ]; then
+          if [ "$UPDATE_UPDATED" = "yes" ]; then
+            ALL_RELEASES=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases?per_page=100")
+            BETA_IDS=$(echo "$ALL_RELEASES" | jq -r '.[] | select(.prerelease == true and (.tag_name | startswith("beta"))) | .id')
+            for id in $BETA_IDS; do
+              if [ -n "$id" ]; then
+                curl -sX DELETE -H "$AUTH_HEADER" "$API_BASE/releases/$id"
+                echo "✅ 已删除旧 beta release: $id"
+              fi
+            done
+          else
             if release_data=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases/tags/beta"); then
               release_id=$(echo "$release_data" | jq -r '.id // empty')
               if [ -n "$release_id" ]; then
                 curl -sX DELETE -H "$AUTH_HEADER" "$API_BASE/releases/$release_id"
-                echo "✅ 已删除旧 beta release"
+                echo "✅ 已删除旧 beta release (用于APP检测)"
               fi
             fi
-          else
-            if release_data=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases/tags/$TAG_NAME"); then
+          fi
+
+          for i in "${!TAGS_TO_PUBLISH[@]}"; do
+            CURRENT_TAG="${TAGS_TO_PUBLISH[$i]}"
+            CURRENT_NAME="${RELEASE_NAMES[$i]}"
+            CURRENT_PRERELEASE="${PRERELEASES[$i]}"
+            
+            # 删除同名 release 如果存在
+            if release_data=$(curl -sH "$AUTH_HEADER" "$API_BASE/releases/tags/$CURRENT_TAG"); then
               release_id=$(echo "$release_data" | jq -r '.id // empty')
               if [ -n "$release_id" ]; then
                 curl -sX DELETE -H "$AUTH_HEADER" "$API_BASE/releases/$release_id"
-                echo "✅ 已删除旧 $TAG_NAME release"
+                echo "✅ 已删除旧 $CURRENT_TAG release"
               fi
             fi
-          fi
 
-          # 创建新Release，带重试机制
-          MAX_RETRIES=3
-          RETRY_COUNT=0
-          RELEASE_ID=""
-          RELEASE_JSON=""
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$RELEASE_ID" ]; do
-            set +e
-            RELEASE_JSON=$(curl -sS --fail --tlsv1.2 --retry 3 --retry-delay 5 --retry-connrefused --connect-timeout 20 -X POST \
-                -H "Content-Type: application/json" \
+            # 创建新Release，带重试机制
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+            RELEASE_ID=""
+            RELEASE_JSON=""
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$RELEASE_ID" ]; do
+              set +e
+              RELEASE_JSON=$(curl -sS --fail --tlsv1.2 --retry 3 --retry-delay 5 --retry-connrefused --connect-timeout 20 -X POST \
+                  -H "Content-Type: application/json" \
+                  -H "$AUTH_HEADER" \
+                  -d '{
+                    "tag_name": "'"$CURRENT_TAG"'",
+                    "name": "'"$CURRENT_NAME"'",
+                    "body": "'"${UPDATE_CONTENT//\"/\\\"}"'",
+                    "target_commitish": "main",
+                    "prerelease": '"$CURRENT_PRERELEASE"'
+                  }' \
+                  "$API_BASE/releases")
+              CURL_EXIT=$?
+              set -e
+
+              if [ "${CURL_EXIT:-1}" -eq 0 ] && [ -n "$RELEASE_JSON" ]; then
+                RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id // empty')
+              else
+                RETRY_COUNT=$((RETRY_COUNT+1))
+                echo "⚠️  第 $RETRY_COUNT 次重试创建Release $CURRENT_TAG..."
+                sleep 5
+              fi
+            done
+
+            if [ -z "$RELEASE_ID" ]; then
+              echo "❌ 创建Release $CURRENT_TAG 失败，跳过文件上传"
+              continue
+            fi
+
+            # 上传所有APK文件
+            for APK_FILE in apk/*.apk; do
+              set +e
+              curl -sS --fail --tlsv1.2 --retry 2 --retry-delay 3 --connect-timeout 30 --max-time 6000 -X POST \
                 -H "$AUTH_HEADER" \
-                -d '{
-                  "tag_name": "'"$TAG_NAME"'",
-                  "name": "'"$RELEASE_NAME"'",
-                  "body": "'"${UPDATE_CONTENT//\"/\\\"}"'",
-                  "target_commitish": "main",
-                  "prerelease": '"$PRERELEASE"'
-                }' \
-                "$API_BASE/releases")
-            CURL_EXIT=$?
-            set -e
-
-            if [ "${CURL_EXIT:-1}" -eq 0 ] && [ -n "$RELEASE_JSON" ]; then
-              RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id // empty')
-            else
-              RETRY_COUNT=$((RETRY_COUNT+1))
-              echo "⚠️  第 $RETRY_COUNT 次重试创建Release..."
-              sleep 5
-            fi
-          done
-
-          if [ -z "$RELEASE_ID" ]; then
-            echo "❌ 创建Release失败，跳过文件上传"
-            exit 1
-          fi
-
-          # 上传所有APK文件
-          for APK_FILE in apk/*.apk; do
-            set +e
-            curl -sS --fail --tlsv1.2 --retry 2 --retry-delay 3 --connect-timeout 30 --max-time 6000 -X POST \
-              -H "$AUTH_HEADER" \
-              -F "file=@$APK_FILE" \
-              "$API_BASE/releases/$RELEASE_ID/attach_files"
-            CURL_EXIT=$?
-            set -e
-            if [ $CURL_EXIT -eq 0 ]; then
-              echo "✅ 已上传 $APK_FILE"
-            else
-              echo "❌ 上传 $APK_FILE 失败 (curl exit $CURL_EXIT)"
-              sleep 10
-            fi
+                -F "file=@$APK_FILE" \
+                "$API_BASE/releases/$RELEASE_ID/attach_files"
+              CURL_EXIT=$?
+              set -e
+              if [ $CURL_EXIT -eq 0 ]; then
+                echo "✅ 已上传 $APK_FILE 到 $CURRENT_TAG"
+              else
+                echo "❌ 上传 $APK_FILE 到 $CURRENT_TAG 失败 (curl exit $CURL_EXIT)"
+                sleep 10
+              fi
+            done
           done
 
   update-storage:

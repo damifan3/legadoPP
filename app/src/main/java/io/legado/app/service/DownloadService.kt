@@ -121,6 +121,8 @@ class DownloadService : BaseService() {
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
             // 添加一个下载任务
             val downloadId = downloadManager.enqueue(request)
+
+            //加入下载列表，可能时避免重复
             downloads[downloadId] =
                 DownloadInfo(
                     url, fileName, NotificationId.Download + downloads.size,

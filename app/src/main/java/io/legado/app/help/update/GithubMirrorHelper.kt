@@ -15,8 +15,8 @@ object GithubMirrorHelper {
      * 例如：https://ghfast.top/https://github.com/user/repo/releases/download/...
      */
     private val MIRROR_PREFIXES = listOf(
-        "https://ghfast.top/",       // ghfast 加速
         "https://gh-proxy.com/",     // gh-proxy 加速
+        "https://ghfast.top/",       // ghfast 加速
         "https://mirror.ghproxy.com/", // ghproxy 镜像
         "https://ghproxy.net/"       // ghproxy.net 加速
     )

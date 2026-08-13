@@ -65,6 +65,7 @@ object AppConst {
         @Suppress("DEPRECATION")
         appCtx.packageManager.getPackageInfo(appCtx.packageName, PackageManager.GET_ACTIVITIES)
             ?.let {
+                //!!表示非空断言，如果真空了会直接崩溃
                 appInfo.versionName = it.versionName!!
                 appInfo.appVariant = when {
                     it.packageName.contains("releaseA") -> AppVariant.RELEASEA
