@@ -357,8 +357,8 @@ jobs:
           
           # GitHub Releases 页面默认按 Commit 时间倒序排列。
           # 当多个 tag 指向同一个 Commit 时，会按 tag 名称的字母倒序排列，导致 beta-xxx 排在 beta 前面。
-          # 创建一个空的 Commit，使其拥有最新的时间戳，从而保证 beta 永远排在最前面。
-          git commit --allow-empty -m "Release beta"
+          # 创建一个空的 Commit 并将其时间设为 2038 年，从而彻底保证 beta 永远排在最前面。
+          GIT_AUTHOR_DATE="2038-01-01T00:00:00Z" GIT_COMMITTER_DATE="2038-01-01T00:00:00Z" git commit --allow-empty -m "Release beta"
           git tag -a beta -m "Latest Beta Release"
           git push -f origin beta
         env:
