@@ -345,12 +345,22 @@ jobs:
           files: ${{ github.workspace }}/apk/*.apk
           fail_on_unmatched_files: true
 
-      - name: Delete Old Latest Pre-Release
+      - name: Delete Old Latest Pre-Release & Recreate Tag
         if: needs.prepare.outputs.updateLog_updated != 'yes'
         run: |
           if gh release view beta &>/dev/null; then
             gh release delete beta -y --cleanup-tag
           fi
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # GitHub Releases 页面默认按 Commit 时间倒序排列。
+          # 当多个 tag 指向同一个 Commit 时，会按 tag 名称的字母倒序排列，导致 beta-xxx 排在 beta 前面。
+          # 创建一个空的 Commit，使其拥有最新的时间戳，从而保证 beta 永远排在最前面。
+          git commit --allow-empty -m "Release beta"
+          git tag -a beta -m "Latest Beta Release"
+          git push -f origin beta
         env:
           GH_TOKEN: ${{ github.token }}
 
