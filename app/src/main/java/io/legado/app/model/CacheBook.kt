@@ -126,6 +126,7 @@ object CacheBook {
     fun close() {
         cacheBookMap.forEach { it.value.stop() }
         cacheBookMap.clear()
+        //成功：数量归零
         successDownloadSet.clear()
         errorDownloadMap.clear()
     }
@@ -162,6 +163,7 @@ object CacheBook {
             postEvent(EventBus.UP_DOWNLOAD_STATE, "")
         }.onEachParallel(AppConfig.threadCount) {
             coroutineScope {
+                //开始下载
                 it.download(this, context)
             }
         }.onCompletion {
@@ -245,7 +247,10 @@ object CacheBook {
 
         @Synchronized
         fun stop() {
+            //等待中：数量归零
             waitDownloadSet.clear()
+            onDownloadSet.clear() // [Bug Fix]: 显式清理正在下载队列，防止 cancel 回调异步执行期间发生内存泄漏
+            // 清理任务
             tasks.clear()
             isStopped = true
             isLoading = false
@@ -309,6 +314,7 @@ object CacheBook {
         @Synchronized
         private fun onCancel(index: Int) {
             onDownloadSet.remove(index)
+            //该标志位会在 stop 函数中置位 true，比如手动点击通知栏或者缓存列表取消时
             if (!isStopped) waitDownloadSet.add(index)
         }
 
@@ -320,6 +326,9 @@ object CacheBook {
          */
         @Synchronized
         fun onFinally() {
+            if (isStopped && tasks.isEmpty && waitDownloadSet.isEmpty() && onDownloadSet.isNotEmpty()) {
+                io.legado.app.constant.AppLog.put("ZombieTask Log: onFinally triggered while stopped, tasks empty?: ${tasks.isEmpty}, but onDownloadSet NOT empty! (Size: ${onDownloadSet.size})", null, false)
+            }
             if (!isLoading && waitDownloadSet.isEmpty() && onDownloadSet.isEmpty()) {
                 cacheBookMap.remove(book.bookUrl)
             }
@@ -387,12 +396,17 @@ object CacheBook {
                     onPostError(chapter, it)
                 }.onCancel {
                     onCancel(chapterIndex)
-                }.onFinally {
-                    onFinally()
-                }.let {
-                    tasks.add(it)
-                    it.start()
-                }
+                //also 函数：返回值 = 传入的对象的本身
+                }.also { coroutine ->
+                    tasks.add(coroutine)
+                    coroutine.onFinally {
+                        // [Bug Fix]: 之前使用 tasks.remove 会联动调用 coroutine.cancel()，
+                        // 导致 onCancel 回调被执行，从而把该章节重新塞回 waitDownloadSet 产生死循环。
+                        // 这里应使用 delete，只从集合中移除记录而不主动 cancel。
+                        tasks.delete(coroutine)
+                        onFinally()
+                    }
+                }.start()
                 return
             }
 
@@ -403,6 +417,7 @@ object CacheBook {
                 book,
                 chapter,
                 context = context,
+                //启动模式为 LAZY 懒加载，底层 Kotlin 协程 launch(start = CoroutineStart.LAZY) 创建后会停留在初始创建状态（New），不会立即调度运行。
                 start = CoroutineStart.LAZY,
                 executeContext = context
             ).onSuccess { content ->
@@ -416,10 +431,15 @@ object CacheBook {
                 downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}")
             }.onCancel {
                 onCancel(chapterIndex)
-            }.onFinally {
-                onFinally()
-            }.apply {
-                tasks.add(this)
+            }.also { coroutine ->
+                tasks.add(coroutine)
+                coroutine.onFinally {
+                    // [Bug Fix]: 之前使用 tasks.remove 会联动调用 coroutine.cancel()，
+                    // 导致 onCancel 回调被执行，从而把该章节重新塞回 waitDownloadSet 产生死循环。
+                    // 这里应使用 delete，只从集合中移除记录而不主动 cancel。
+                    tasks.delete(coroutine)
+                    onFinally()
+                }
             }.start()
         }
 
@@ -481,7 +501,7 @@ object CacheBook {
                 onCancel(chapter.index)
                 downloadFinish(chapter, "download canceled", resetPageOffset, true)
             }.onFinally {
-                onFinally()
+                    onFinally()
             }.start()
         }
 

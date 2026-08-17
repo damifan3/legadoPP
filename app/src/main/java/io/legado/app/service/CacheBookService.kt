@@ -84,18 +84,24 @@ class CacheBookService : BaseService() {
                     intent.getIntExtra("end", 0)
                 )
 
+
                 IntentAction.remove -> removeDownload(intent.getStringExtra("bookUrl"))
-                IntentAction.stop -> stopSelf()
+                // 用户点击取消按钮？
+                IntentAction.stop -> {
+                    io.legado.app.constant.AppLog.put("ZombieTask Log: CacheBookService received IntentAction.stop. Calling stopSelf()", null, false)
+                    stopSelf()
+                }
             }
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onDestroy() {
+        io.legado.app.constant.AppLog.put("ZombieTask Log: CacheBookService.onDestroy() started", null, false)
         isRun = false
         cachePool.close()
-        CacheBook.close()
-        super.onDestroy()
+        CacheBook.close()// 注意这里
+        super.onDestroy()// 系统销毁服务，撤销通知栏
         postEvent(EventBus.UP_DOWNLOAD, "")
     }
 
@@ -182,7 +188,13 @@ class CacheBookService : BaseService() {
     override fun startForegroundNotification() {
         notificationBuilder.setContentText(notificationContent)
         val notification = notificationBuilder.build()
+        try {
         startForeground(NotificationId.CacheBookService, notification)
+            io.legado.app.constant.AppLog.put("ZombieTask Log: CacheBookService.startForeground() success", null, false)
+        } catch (e: Exception) {
+            io.legado.app.constant.AppLog.put("ZombieTask Log: CacheBookService.startForeground() failed (ForegroundServiceStartNotAllowedException?)", e, false)
+            throw e
+        }
     }
 
 }

@@ -132,6 +132,8 @@ class Coroutine<T>(
         context: CoroutineContext? = null,
         block: suspend CoroutineScope.() -> Unit
     ): Coroutine<T> {
+        //这里仅仅是注册回调而不是真的触发 cancel 回调
+        //io.legado.app.constant.AppLog.put("ZombieTask Log: Coroutine.onCancel() called. ", null, false)
         this.cancel = VoidCallback(context, block)
         job.invokeOnCompletion {
             if (it is CancellationException && it !is ActivelyCancelException) {
@@ -143,20 +145,32 @@ class Coroutine<T>(
 
     //取消当前任务
     fun cancel(cause: ActivelyCancelException = ActivelyCancelException()) {
+        if (job.isCompleted) {
+            io.legado.app.constant.AppLog.put("ZombieTask Log: Coroutine.Cancel() 错误调用. job.isCompleted 但是触发了 onCancel", null, false)
+            return
+        }
+        val trace = android.util.Log.getStackTraceString(Throwable())
+        io.legado.app.constant.AppLog.put("ZombieTask Log: Coroutine.cancel() called. job.isCancelled=${job.isCancelled}\nStack trace:\n$trace", null, false)
+        //必须同步，及时发出取消信号
         if (!job.isCancelled) {
+            //其实是抛出一个 CancellationException 异常
             job.cancel(cause)
         }
         cancel?.let {
+            io.legado.app.constant.AppLog.put("ZombieTask Log: Executing onCancel block on executeContext", null, false)
+            //异步，回调善后工作要异步
+            //业界标准的 “快速失败（Fast-Fail）+ 异步清理（Async Cleanup）” 架构
             DEFAULT.launch(executeContext) {
                 if (null == it.context) {
                     it.block.invoke(this)
                 } else {
                     withContext(it.context) {
+                        //传进来的回调 { onCancel(chapterIndex)}
                         it.block.invoke(this)
                     }
                 }
             }
-        }
+        } ?: io.legado.app.constant.AppLog.put("ZombieTask Log: No onCancel block found", null, false)
     }
 
     fun invokeOnCompletion(handler: CompletionHandler): DisposableHandle {
@@ -167,6 +181,7 @@ class Coroutine<T>(
         job.start()
     }
 
+    //执行外部代码的地方
     private fun executeInternal(
         context: CoroutineContext,
         block: suspend CoroutineScope.() -> T
@@ -186,6 +201,7 @@ class Coroutine<T>(
                     true
                 } ?: false
                 if (!consume) {
+                    io.legado.app.constant.AppLog.put("ZombieTask Log: Coroutine.dispatchCallback of ERROR callback will be called.", null, false)
                     error?.let { dispatchCallback(this, e, it) }
                 }
             } finally {
@@ -213,7 +229,12 @@ class Coroutine<T>(
         value: R,
         callback: Callback<R>
     ) {
-        if (!scope.isActive) return
+        io.legado.app.constant.AppLog.put("ZombieTask Log: Coroutine.dispatchCallback called.", null, false)
+        //在协程被主动取消（比如用户退出了界面）后，阻止后续的回调（如更新 UI/ onError）被触发
+        if (!scope.isActive) {
+            io.legado.app.constant.AppLog.put("ZombieTask Log: dispatchCallback skipped because !scope.isActive (value=$value)", null, false)
+            return
+        }
         if (null == callback.context) {
             callback.block.invoke(scope, value)
         } else {
