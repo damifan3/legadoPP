@@ -311,10 +311,14 @@ object CacheBook {
             onPostError(chapter, error)
         }
 
+        /**
+         * 1. 一个特殊情况：如果进入正文，缓存没完成就退出了，
+         *  需要此函数将章节从 onDownloadSet 移动到 waitDownloadSet
+         */
         @Synchronized
         private fun onCancel(index: Int) {
             onDownloadSet.remove(index)
-            //该标志位会在 stop 函数中置位 true，比如手动点击通知栏或者缓存列表取消时
+            //该标志位会在 CacheBookModel.stop 函数中置位 true，比如手动点击通知栏或者缓存列表取消时
             if (!isStopped) waitDownloadSet.add(index)
         }
 

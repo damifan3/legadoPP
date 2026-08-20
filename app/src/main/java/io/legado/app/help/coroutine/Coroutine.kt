@@ -137,7 +137,19 @@ class Coroutine<T>(
         this.cancel = VoidCallback(context, block)
         job.invokeOnCompletion {
             if (it is CancellationException && it !is ActivelyCancelException) {
-                cancel()
+                // 不能被 if (!scope.isActive) 拦截，所以不使用 cancel 方法
+                // 但是又不能删除 cancel 的防御机制，之前内存泄漏就会对已经死去的线程错误调用。
+                io.legado.app.constant.AppLog.put("ZombieTask Log: invokeOnCompletion called with CancellationException 应该是突然退出正文等不一般的取消情景", null, false)
+                val cancelCallback = cancel ?: return@invokeOnCompletion
+                DEFAULT.launch(executeContext) {
+                    if (null == cancelCallback.context) {
+                        cancelCallback.block.invoke(this)
+                    } else {
+                        withContext(cancelCallback.context) {
+                            cancelCallback.block.invoke(this)
+                        }
+                    }
+                }
             }
         }
         return this@Coroutine
@@ -154,6 +166,7 @@ class Coroutine<T>(
         //必须同步，及时发出取消信号
         if (!job.isCancelled) {
             //其实是抛出一个 CancellationException 异常
+            // 这一句执行后，底层的 isCancelled 就会立刻变为 true
             job.cancel(cause)
         }
         cancel?.let {
@@ -231,6 +244,7 @@ class Coroutine<T>(
     ) {
         io.legado.app.constant.AppLog.put("ZombieTask Log: Coroutine.dispatchCallback called.", null, false)
         //在协程被主动取消（比如用户退出了界面）后，阻止后续的回调（如更新 UI/ onError）被触发
+        // isActive 并不是开发者自己维护的布尔变量，而是 Kotlin 官方协程库 (kotlinx.coroutines) 内部管理的一个核心状态属性。
         if (!scope.isActive) {
             io.legado.app.constant.AppLog.put("ZombieTask Log: dispatchCallback skipped because !scope.isActive (value=$value)", null, false)
             return

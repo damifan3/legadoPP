@@ -171,6 +171,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_download,
+            //下载之后章节
             R.id.menu_download_after -> {
                 if (!CacheBook.isRun) sureCacheBook {
                     adapter.getItems().forEach { book ->
@@ -185,7 +186,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
                     CacheBook.stop(this@CacheActivity)
                 }
             }
-
+            //下载全部章节
             R.id.menu_download_all -> {
                 if (!CacheBook.isRun) sureCacheBook {
                     adapter.getItems().forEach { book ->
