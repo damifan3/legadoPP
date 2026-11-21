@@ -84,7 +84,7 @@ class CacheBookService : BaseService() {
                     intent.getIntExtra("end", 0)
                 )
 
-
+                //在离线缓存界面点击单本书籍的暂停按钮
                 IntentAction.remove -> removeDownload(intent.getStringExtra("bookUrl"))
                 // 用户点击取消按钮？
                 IntentAction.stop -> {
@@ -159,6 +159,10 @@ class CacheBookService : BaseService() {
     private fun removeDownload(bookUrl: String?) {
         CacheBook.cacheBookMap[bookUrl]?.stop()
         postEvent(EventBus.UP_DOWNLOAD, "")
+        /*移除当前书籍后，如果后台调度协程处于空闲态（downloadJob == null），
+        通过调用 download() 继续下载队列中剩余的其他书籍能够；
+        若已无剩余书籍，则借由其生命周期出口安全触发 stopSelf() 销毁服务。
+        */
         if (downloadJob == null && CacheBook.isRun) {
             download()
             return

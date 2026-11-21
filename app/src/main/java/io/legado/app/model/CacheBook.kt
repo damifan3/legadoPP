@@ -102,7 +102,7 @@ object CacheBook {
             }
         }
     }
-
+    //在离线缓存界面点击单本书籍的暂停按钮
     fun remove(context: Context, bookUrl: String) {
         context.startService<CacheBookService> {
             action = IntentAction.remove

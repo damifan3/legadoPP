@@ -15,6 +15,7 @@ import io.legado.app.data.appDb
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getFolderNameNoCache
+import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.simulatedTotalChapterNum
@@ -28,6 +29,8 @@ import kotlinx.parcelize.Parcelize
 import java.nio.charset.Charset
 import java.time.LocalDate
 import kotlin.math.max
+import io.legado.app.model.CacheAudio
+import io.legado.app.model.CacheBook
 
 @Parcelize
 @TypeConverters(Book.Converters::class)
@@ -440,6 +443,26 @@ data class Book(
             io.legado.app.model.AudioPlay.stop()
             io.legado.app.model.AudioPlay.book = null
         }
+        // 当删除书籍时，如果该书籍正处于离线缓存任务中，需及时取消并清理：
+        if (isAudio) {
+            // 1. 有声书：若正在下载则直接通过内存模型取消协程任务并移除，无需且不可随意启动 Service
+            if (CacheAudio.isDownloading(bookUrl)) {
+                CacheAudio.removeDownload(bookUrl)
+            }
+        } else {
+            // 2. 普通文本书：当处于缓存队列中时，先同步中断内存协程和待下载任务，避免并发竞态回写已删除书籍
+            CacheBook.cacheBookMap[bookUrl]?.let { model ->
+                model.stop()
+                // 仅当下载服务正在运行中时，才向其发送 Intent 通知其更新通知栏及调度后续任务（防止服务未运行时被误唤醒或后台崩溃）
+//                if (io.legado.app.service.CacheBookService.isRun) {
+//                    CacheBook.remove(splitties.init.appCtx, bookUrl)
+//                }
+                // 调度引擎检测到任务池为空后会自动调用 stopSelf() 退出服务并销毁通知栏，无需发送 Intent
+            }
+        }
+        // 不需要，每次冷启动时， 在 App.kt 的初始化逻辑中，
+        // 系统会调用 BookHelp.clearInvalidCache()，删除孤儿缓存
+        //io.legado.app.help.book.BookHelp.clearCache(this)
         appDb.bookDao.delete(this)
     }
 
